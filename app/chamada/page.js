@@ -1,2 +1,3 @@
-import { redirect } from "next/navigation";
-export default function Page() { redirect("/painel"); }
+"use client";
+import V from "@/components/views/Chamada";
+export default function Page() { return <V />; }

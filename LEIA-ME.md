@@ -17,10 +17,12 @@ As faltas são contadas **em horas**:
 - Frequência = (carga horária − horas de falta) ÷ carga horária. Limite de faltas = 25% da carga horária (ex.: 160h → 40h).
 - O percentual é sempre arredondado **para baixo** (74,97% aparece como 74,9%, nunca como 75%).
 
-**Menu:** Início · Pendências · Alunos · Relatórios · Turmas (Manhã / Tarde / Noite / Finalizadas) · Configurações.
-**Dentro da turma:** Chamada · Alunos · Pendências · Resumo · ⚙️ Configurar (dados da turma, finalizar, excluir).
+**Menu (igual ao protótipo):** filtros de turno (Todos/Manhã/Tarde/Noite) e de turmas (Todas/Ativas/Finalizadas), busca,
+Painel · Agenda do dia · Gestão de Permanência · Chamada · Contato com alunos · Importar · Relatórios · Configurações,
+e a lista de turmas por tipo (Técnicos / FIC). Ao clicar numa turma abre a Chamada; o botão ⚙ Configurar abre os dados da turma.
 
-**Situação de frequência (3 cores):** OK · **Em risco** (já usou 60% das faltas permitidas, faltas seguidas ou ritmo de faltas alto) · **Abaixo de 75%**.
+**Situação (padrão da planilha):** Regular · Monitorar (85% ou menos) · Acompanhar (3+ faltas no mês) · Risco de evasão (abaixo de 75%).
+**Gestão de Permanência:** baixo risco · atenção · alto risco · risco de evasão (combina frequência, faltas seguidas e projeção).
 
 **Automático:** faltas seguidas (3 dias) ou entrada em risco → aluno vai para **Pendências** com “Necessita contato”;
 e-mail automático opcional (uma vez por sequência de faltas).

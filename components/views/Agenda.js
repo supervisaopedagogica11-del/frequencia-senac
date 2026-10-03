@@ -1,87 +1,102 @@
 "use client";
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ClipboardCheck, MessageCircle, Send, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useData } from "../DataProvider";
 import { useUI } from "../Shell";
-import { FaixaChip, Pct, Empty } from "../ui";
-import { HistoricoContatos, EmailsEnviados } from "./Contatos";
-import { montarAgenda } from "@/lib/pendencias";
-import { addDias, fmtData, waLink, textoWhats } from "@/lib/engine";
+import { Empty } from "../ui";
+import { fmtData, fmtPct, fmtHoras } from "@/lib/engine";
+import { RISCO_COR, STATUS_CONTATO_COR } from "@/lib/constants";
 
-const EMAIL = { enviado: ["E-mail automático enviado", "#10B981"], erro: ["Falha no e-mail — fazer contato manual", "#EF4444"], sem_email: ["Aluno sem e-mail — fazer contato manual", "#F59E0B"] };
-
-function Item({ linha, cor, motivo, alertas = [], extra }) {
+// Agenda do dia — somente ações pendentes (igual ao protótipo)
+export default function Agenda() {
+  const { alertas } = useData();
   const ui = useUI();
-  const { acoes, pode, hoje, cfg } = useData();
-  const wa = waLink(linha.aluno.telefone, textoWhats(linha.aluno, linha.turma, cfg));
-  const em = alertas.map((a) => EMAIL[a.emailStatus]).find(Boolean);
-  return (
-    <div className="item" style={{ borderLeftColor: cor }}>
-      <div className="grow" style={{ minWidth: 200 }}>
-        <div className="t"><button className="link-aluno" onClick={() => ui.abrirFicha(linha.turma.id, linha.aluno.id)}>{linha.aluno.nome}</button> <Pct r={linha.r} /></div>
-        <div className="s">{linha.turma.curso} · {motivo}</div>
-        {em && <div className="small" style={{ color: em[1], fontWeight: 600, marginTop: 2 }}>✉ {em[0]}</div>}
-        {extra}
+  const ag = ui.agenda;
+  const vazio = !ag.total && !ag.proximosLimite.length && !ag.turmasAcompanhar.length && !ag.pendenciasAdmin.length && !ag.avisos.length;
+  const emailInfo = (l) => {
+    const a = Object.values(alertas).find((x) => x.turmaId === l.turma.id && x.alunoId === l.aluno.id && x.status === "aberto" && x.tipo === "consecutivas");
+    if (!a) return null;
+    return { enviado: "✉ e-mail automático enviado", erro: "✉ falha no e-mail automático — contato manual", sem_email: "✉ sem e-mail cadastrado" }[a.emailStatus] || null;
+  };
+  const Item = ({ l, cor, sub, direita }) => (
+    <div className="agenda-item" style={{ borderLeftColor: cor }} onClick={() => ui.abrirFicha(l.turma.id, l.aluno.id)}>
+      <div className="grow">
+        <div style={{ fontSize: 13, fontWeight: 700 }}>{l.aluno.nome}</div>
+        <div className="small soft">{l.turma.curso} · {sub}</div>
       </div>
-      {pode("contatos") && (
-        <div className="acoes">
-          <button className="btn btn-primary btn-sm" onClick={() => ui.abrirContato(linha.turma.id, linha.aluno.id)}><ClipboardCheck size={12} /> Registrar contato</button>
-          {wa && <a className="btn btn-ghost btn-sm btn-icon" href={wa} target="_blank" rel="noreferrer" title="Abrir WhatsApp"><MessageCircle size={13} /></a>}
-          {linha.aluno.email && pode("emails") && <button className="btn btn-ghost btn-sm btn-icon" title="Enviar e-mail" onClick={() => ui.abrirEmail(linha.turma.id, linha.aluno.id, { motivo })}><Send size={13} /></button>}
-          {alertas.length > 0 && <button className="btn btn-ghost btn-sm btn-icon" title="Lembrar daqui a 2 dias" onClick={() => alertas.forEach((a) => acoes.adiarAlerta(a, addDias(hoje, 2)))}><Clock size={13} /></button>}
-          {alertas.length > 0 && <button className="btn btn-ghost btn-sm btn-icon" title="Resolvido (sem registrar contato)" onClick={() => alertas.forEach((a) => acoes.resolverAlerta(a, "Resolvido pela lista de pendências"))}><CheckCircle2 size={13} /></button>}
-        </div>
-      )}
+      {direita || <Eye size={14} color="var(--ink-soft)" />}
     </div>
   );
-}
+  const Secao = ({ titulo, itens, children }) => itens.length ? (
+    <div style={{ marginBottom: 20 }}>
+      <h3 style={{ fontSize: 13.5, margin: "0 0 8px" }}>{titulo} ({itens.length})</h3>
+      <div className="lista" style={{ gap: 6 }}>{children}</div>
+    </div>
+  ) : null;
 
-export function ListaPendencias({ turmaId }) {
-  const { turmas, linhas, alertas, contatos, freq, hoje } = useData();
-  const ui = useUI();
-  const ag = useMemo(() => (turmaId ? montarAgenda({ turmas, linhas, alertas, contatos, freq, hoje, turmaId }) : ui.agenda), [turmaId, turmas, linhas, alertas, contatos, freq, hoje, ui.agenda]);
-  if (!ag.total && !ag.chamadas.length && !ag.avisos.length) return <Empty>Nenhuma pendência. Tudo em dia! 🎉</Empty>;
   return (
     <>
-      {ag.contatar.length > 0 && (
-        <div className="secao">
-          <div className="secao-head"><h3>Para contatar ({ag.contatar.length})</h3></div>
-          <div className="lista">{ag.contatar.map((x) => <Item key={x.linha.key} linha={x.linha} cor={x.cor} motivo={x.motivo} alertas={x.alertas} />)}</div>
-        </div>
+      <div className="page-header"><div><h2>Agenda do dia</h2><p>Somente ações pendentes — para ver a classificação de risco por aluno, use o Painel ou a Gestão de Permanência</p></div></div>
+      {vazio ? <Empty>Nenhuma ação pendente hoje. Tudo em dia. 🎉</Empty> : (
+        <>
+          <Secao titulo="📞 Sem nenhum contato registrado" itens={ag.semContato}>
+            {ag.semContato.map((l) => <Item key={l.key} l={l} cor={RISCO_COR[l.risco.nivel]} sub={[l.risco.motivos[0] || `${l.r.consecutivas} faltas seguidas`, emailInfo(l)].filter(Boolean).join(" · ")} />)}
+          </Secao>
+          <Secao titulo="⏳ Aguardando retorno" itens={ag.aguardandoRetorno}>
+            {ag.aguardandoRetorno.map((l) => {
+              const st = l.contato.status || "Aguardando retorno";
+              return <Item key={l.key} l={l} cor={STATUS_CONTATO_COR[st]} sub={`última tentativa em ${fmtData(l.contato.tentativas.at(-1)?.data)}`} direita={<span className="chip" style={{ background: STATUS_CONTATO_COR[st] || "#9CA3AF" }}>{st}</span>} />;
+            })}
+          </Secao>
+          <Secao titulo="✅ Retornaram após contato — revisar e finalizar" itens={ag.retornaram}>
+            {ag.retornaram.map((l) => <Item key={l.key} l={l} cor="var(--verde)" sub={l.contato.justificativa || "retornou"} />)}
+          </Secao>
+          <Secao titulo="⚠ Próximos do limite crítico de 75%" itens={ag.proximosLimite}>
+            {ag.proximosLimite.map((l) => {
+              const dias = Math.floor(l.r.horasRestantes / (l.r.horasDia || 1));
+              return <Item key={l.key} l={{ ...l }} cor="var(--vermelho)" sub={`${fmtPct(l.r.pct)} · só pode faltar mais ${fmtHoras(l.r.horasRestantes)} (${dias >= 1 ? `~${dias} ${dias === 1 ? "dia" : "dias"}` : "menos de 1 dia"}) antes de reprovar por falta`} />;
+            })}
+          </Secao>
+          {ag.turmasAcompanhar.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ fontSize: 13.5, margin: "0 0 8px" }}>🏫 Turmas que precisam de acompanhamento ({ag.turmasAcompanhar.length})</h3>
+              <div className="lista" style={{ gap: 6 }}>
+                {ag.turmasAcompanhar.map((x) => (
+                  <Link key={x.turma.id} href={`/turmas/${x.turma.id}`} className="agenda-item" style={{ borderLeftColor: "var(--vermelho)", textDecoration: "none", color: "inherit" }}>
+                    <div className="grow"><div style={{ fontSize: 13, fontWeight: 700 }}>{x.turma.curso} <span className="soft" style={{ fontWeight: 400 }}>({x.turma.codigo})</span></div><div className="small soft">{x.n} alunos ({Math.round(x.prop * 100)}%) em risco de evasão</div></div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {(ag.pendenciasAdmin.length > 0 || ag.avisos.length > 0) && (
+            <div className="grid2">
+              {ag.pendenciasAdmin.length > 0 && (
+                <div className="card" style={{ borderLeft: "4px solid var(--amarelo)" }}>
+                  <div className="small soft" style={{ fontWeight: 700, marginBottom: 8 }}>🗂 Pendências administrativas</div>
+                  {ag.pendenciasAdmin.map((p, i) => (
+                    <div key={i} className="small" style={{ padding: "4px 0", display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>{p.texto}</span>
+                      <button className="link-aluno small" onClick={() => (p.linha ? ui.abrirAluno(p.turma.id, p.linha.aluno.id) : ui.abrirConfigTurma(p.turma.id))}>Resolver</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {ag.avisos.length > 0 && (
+                <div className="card" style={{ borderLeft: "4px solid var(--roxo)" }}>
+                  <div className="small soft" style={{ fontWeight: 700, marginBottom: 8 }}>📌 Avisos importantes</div>
+                  {ag.avisos.map((a, i) => (
+                    <div key={i} className="small" style={{ padding: "4px 0", display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>{a.texto}</span>
+                      {a.chamada ? <Link className="small" href={`/turmas/${a.turma.id}`}>Fazer chamada</Link> : <button className="link-aluno small" onClick={() => ui.abrirConfigTurma(a.turma.id)}>Finalizar</button>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
-      {ag.retornos.length > 0 && (
-        <div className="secao">
-          <div className="secao-head"><h3>Retornos agendados ({ag.retornos.length})</h3></div>
-          <div className="lista">{ag.retornos.map((x) => <Item key={x.linha.key} linha={x.linha} cor="#4F46E5" motivo={`${x.atraso > 0 ? `retorno estava marcado para ${fmtData(x.contato.proximaData)}` : "retorno marcado para hoje"}${x.contato.proximaAcao ? ` · ${x.contato.proximaAcao}` : ""}`} />)}</div>
-        </div>
-      )}
-      {!turmaId && ag.chamadas.length > 0 && (
-        <div className="aviso info" style={{ marginBottom: 12 }}>Chamada de hoje ainda não feita: {ag.chamadas.map((t, i) => <span key={t.id}>{i ? ", " : " "}<Link href={`/turmas/${t.id}`}>{t.curso}</Link></span>)}</div>
-      )}
-      {ag.avisos.map((a, i) => (
-        <div key={i} className="aviso" style={{ marginBottom: 8 }}><AlertTriangle size={14} /> <span className="grow">{a.texto}</span> <button className="link-aluno small" onClick={() => ui.abrirConfigTurma(a.turma.id)}>Ajustar</button></div>
-      ))}
-    </>
-  );
-}
-
-export default function Agenda() {
-  const [aba, setAba] = useState("pend");
-  const ui = useUI();
-  const d = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
-  const dia = d.charAt(0).toUpperCase() + d.slice(1);
-  return (
-    <>
-      <div className="page-header"><div><h2>Pendências</h2><p>{dia} · quem precisa de contato da Supervisão</p></div></div>
-      <div className="tabs">
-        <button className={aba === "pend" ? "active" : ""} onClick={() => setAba("pend")}>Para fazer ({ui.agenda.total})</button>
-        <button className={aba === "hist" ? "active" : ""} onClick={() => setAba("hist")}>Contatos feitos</button>
-        <button className={aba === "emails" ? "active" : ""} onClick={() => setAba("emails")}>E-mails enviados</button>
-      </div>
-      {aba === "pend" && <ListaPendencias />}
-      {aba === "hist" && <HistoricoContatos />}
-      {aba === "emails" && <EmailsEnviados />}
     </>
   );
 }

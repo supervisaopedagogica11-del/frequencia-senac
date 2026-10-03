@@ -87,3 +87,18 @@ test("modelo de e-mail com variáveis", () => {
   const txt = renderTemplate("Olá {{aluno}}, {{faltas_consecutivas}} faltas ({{datas_faltas}}), {{horas_falta}}, {{frequencia}}", variaveisEmail({ turma, aluno: turma.alunos[0], resumo: r }));
   assert.equal(txt, "Olá João Silva, 3 faltas (02/09, 03/09 e 04/09), 12h, 92,5%");
 });
+
+import { statusDoResumo, riscoDoResumo } from "../lib/engine.js";
+test("situação e risco no padrão do artefato", () => {
+  // 6 dias inteiros = 24h → 85% → Monitorar
+  const lista = []; for (let i = 1; i <= 6; i++) lista.push([dia(i), { status: "F" }]);
+  for (let i = 10; i <= 14; i++) lista.push([dia(i), null]);
+  const r = resumoAluno(turma, "a1", freqCom(lista), null, "2026-10-15");
+  assert.equal(r.pct, 85);
+  assert.equal(statusDoResumo(r, "2026-10-15").label, "Monitorar");
+  // 3 faltas no mês corrente → Acompanhar
+  assert.equal(statusDoResumo(r, "2026-09-30").label, "Acompanhar");
+  // 3 seguidas → alto risco
+  const f2 = freqCom([[dia(1), null], [dia(2), { status: "F" }], [dia(3), { status: "F" }], [dia(4), { status: "F" }]]);
+  assert.equal(riscoDoResumo(resumoAluno(turma, "a1", f2, null, "2026-09-30")).nivel, "laranja");
+});

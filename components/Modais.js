@@ -6,9 +6,9 @@ import {
 import { useData } from "./DataProvider";
 import { useUI } from "./Shell";
 import { Modal, FaixaChip, StatusChip, FaltasBar } from "./ui";
-import { FORMAS_CONTATO, RESULTADOS_CONTATO, STATUS_ALUNO, TIPOS_TURMA, TURNOS, FAIXA_COR } from "@/lib/constants";
+import { TIPOS_TURMA, TURNOS, TIER_COR, RISCO_LABEL, RISCO_COR, SITUACOES_ALUNO } from "@/lib/constants";
 import {
-  fmtData, fmtDataHora, fmtDataCurta, addDias, statusAluno, isFinalizada, telLink, waLink, mailtoLink, emailValido, renderTemplate, variaveisEmail, fmtPct, fmtHoras, textoWhats,
+  fmtData, fmtDataHora, isFinalizada, waLink, mailtoLink, emailValido, renderTemplate, variaveisEmail, fmtPct, fmtHoras, textoWhats, situacaoAluno,
 } from "@/lib/engine";
 import { exportarFichaPDF } from "@/lib/exportar";
 
@@ -20,149 +20,101 @@ function useTurmaAluno(turmaId, alunoId) {
   return { turma, aluno, linha };
 }
 
-// ---------------------------------------------------------------- FICHA DO ALUNO
+// ---------------------------------------------------------------- FICHA DO ALUNO (igual ao protótipo + melhorias)
 export function FichaAluno({ turmaId, alunoId }) {
   const { turma, aluno, linha } = useTurmaAluno(turmaId, alunoId);
-  const { contatos, alertas, historico, cfg, pode, acoes } = useData();
+  const { linhas, cfg, pode, acoes } = useData();
   const ui = useUI();
-  const [obs, setObs] = useState(null);
-  const contato = (turma && aluno && contatos[`${turma.id}|${aluno.id}`]) || { tentativas: [] };
-  const linhaTempo = useMemo(() => {
-    if (!turma || !aluno) return [];
-    const ev = [];
-    (contato.tentativas || []).forEach((t) => ev.push({ em: (t.data || "") + "T23:59", cor: "#8B5CF6", titulo: `${fmtDataCurta(t.data)} – ${t.forma || t.tipo || "Contato"}${t.resultado ? ` – ${t.resultado}` : ""}`, texto: [t.obs, t.justificativa && `Justificativa: ${t.justificativa}`, t.encaminhamento && `Encaminhamento: ${t.encaminhamento}`, t.proximaData && `Próximo contato: ${fmtData(t.proximaData)}`].filter(Boolean), quem: t.responsavel }));
-    historico.filter((h) => h.alunoId === aluno.id && h.turmaId === turma.id && !["contato", "frequencia"].includes(h.tipo)).forEach((h) => ev.push({ em: h.em, cor: { alerta: "#F97316", email_enviado: "#10B981", email_erro: "#EF4444", status: "#3B82F6" }[h.tipo] || "#6B7280", titulo: h.descricao, quem: h.usuario, hora: true }));
-    return ev.sort((a, b) => (b.em || "").localeCompare(a.em || ""));
-  }, [contato, historico, aluno, turma]);
   if (!turma || !aluno || !linha) return <Modal titulo="Aluno não encontrado" onClose={ui.fechar}><p>Este aluno não existe mais.</p></Modal>;
   const r = linha.r;
-  const status = statusAluno(aluno);
-  const abertas = Object.values(alertas).filter((a) => a.turmaId === turma.id && a.alunoId === aluno.id && a.status === "aberto");
+  const contato = acoes.contatoDe(turma.id, aluno.id);
+  const situacao = situacaoAluno(aluno);
+  const outras = linhas.filter((x) => x.aluno.nome === aluno.nome && x.turma.id !== turma.id);
   const wa = waLink(aluno.telefone, textoWhats(aluno, turma, cfg));
+  const diasRestantes = r.horasRestantes !== null ? Math.floor(r.horasRestantes / (r.horasDia || 1)) : null;
+  const historicoPdf = (contato.tentativas || []).map((t) => ({ em: t.data, titulo: `${t.tipo || t.forma || "Contato"}${t.obs ? ` · ${t.obs}` : ""}`, texto: t.resultado ? [`Resultado: ${t.resultado}`] : [], quem: t.responsavel }));
 
   return (
-    <Modal grande onClose={ui.fechar} icone={<User size={18} />} titulo={aluno.nome}
-      subtitulo={`${turma.curso}${turma.codigo ? ` · ${turma.codigo}` : ""} · ${aluno.telefone || "sem telefone"} · ${aluno.email || "sem e-mail"}`}>
-      <div className="row" style={{ marginBottom: 16 }}>
-        {pode("contatos") && <button className="btn btn-primary btn-sm" onClick={() => ui.abrirContato(turma.id, aluno.id)}><ClipboardCheck size={13} /> Registrar contato</button>}
-        {wa && <a className="btn btn-ghost btn-sm" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={13} /> WhatsApp</a>}
-        {aluno.email && pode("emails") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirEmail(turma.id, aluno.id)}><Send size={13} /> E-mail</button>}
-        {pode("editar") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirAluno(turma.id, aluno.id)}><Pencil size={13} /> Editar cadastro</button>}
-        <button className="btn btn-ghost btn-sm" onClick={() => exportarFichaPDF({ turma, aluno, linha, contato, historico: linhaTempo, cfg })}><Printer size={13} /> PDF</button>
-      </div>
-
-      <div className="cards" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 12 }}>
-        <div className="card kpi" style={{ borderLeftColor: FAIXA_COR[r.faixa] }}><div className="n" style={{ color: FAIXA_COR[r.faixa] }}>{fmtPct(r.pct)}</div><div className="l">Frequência</div></div>
-        <div className="card kpi" style={{ borderLeftColor: FAIXA_COR[r.faixa] }}><div className="n">{fmtHoras(r.horasFalta)}</div><div className="l">Faltas de {fmtHoras(r.limiteHoras)} permitidas</div></div>
-        <div className="card kpi" style={{ borderLeftColor: "#4F46E5" }}><div className="n">{r.faixa === "abaixo" ? "0h" : fmtHoras(r.horasRestantes)}</div><div className="l">Ainda pode faltar</div></div>
-      </div>
-      <div className={"aviso " + (r.faixa === "regular" ? "ok" : r.faixa === "abaixo" ? "erro" : "")} style={{ marginBottom: 14 }}>
-        <FaixaChip faixa={r.faixa} />
-        <span>{r.faixa === "regular" ? `Frequência dentro do esperado.${r.consecutivas ? ` ${r.consecutivas} falta(s) seguida(s) recente(s).` : ""}` : r.motivo}</span>
-      </div>
-
-      <div className="row" style={{ marginBottom: 14 }}>
-        <label className="campo" style={{ minWidth: 220 }}><span>Acompanhamento</span>
-          <select className="select" value={status} disabled={!pode("contatos")} onChange={(e) => acoes.mudarStatusAluno(turma, aluno, e.target.value)}>
-            {STATUS_ALUNO.map((s) => <option key={s}>{s}</option>)}
+    <Modal grande onClose={ui.fechar} icone={<User size={16} />} titulo={aluno.nome}
+      subtitulo={`${turma.curso} · ${turma.codigo || "sem código"} · ${aluno.telefone || "sem telefone"} · ${aluno.email || "sem e-mail"}`}>
+      {situacao !== "Ativo" && (
+        <div className="aviso info" style={{ marginBottom: 14 }}>Este aluno está marcado como <strong>&nbsp;{situacao}&nbsp;</strong> — por isso não aparece mais na Agenda, no Painel de atenção nem na Gestão de Permanência.</div>
+      )}
+      <div className="ficha-acoes">
+        <label className="small" style={{ display: "flex", alignItems: "center", gap: 6 }}>Situação do aluno:
+          <select className="select" value={situacao} disabled={!pode("contatos")} onChange={(e) => acoes.updateAlunoSituacao(turma, aluno, e.target.value)}>
+            {SITUACOES_ALUNO.map((x) => <option key={x}>{x}</option>)}
           </select>
         </label>
-        {abertas.length > 0 && pode("contatos") && (
-          <button className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-end" }} onClick={() => abertas.forEach((a) => acoes.resolverAlerta(a, "Resolvido pela ficha do aluno"))}><CheckCircle2 size={13} /> Marcar pendência como resolvida</button>
-        )}
+        <label className="small" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={!!contato.concluido} disabled={!pode("contatos")} onChange={(e) => acoes.atualizarContato(turma, aluno, { concluido: e.target.checked }, e.target.checked ? "Acompanhamento concluído" : "Acompanhamento reaberto")} />
+          Acompanhamento concluído (sai da Agenda)
+        </label>
+      </div>
+      <div className="row" style={{ marginBottom: 14, gap: 6 }}>
+        {wa && <a className="btn btn-ghost btn-sm" href={wa} target="_blank" rel="noreferrer"><MessageCircle size={12} /> WhatsApp</a>}
+        {aluno.email && pode("emails") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirEmail(turma.id, aluno.id)}><Send size={12} /> Enviar e-mail</button>}
+        {pode("editar") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirAluno(turma.id, aluno.id)}><Pencil size={12} /> Editar cadastro (e-mail/telefone)</button>}
+        <button className="btn btn-ghost btn-sm" onClick={() => exportarFichaPDF({ turma, aluno, linha, contato, historico: historicoPdf, cfg })}><Printer size={12} /> Relatório PDF</button>
       </div>
 
-      {r.historico.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
-          <h4 style={{ marginBottom: 6 }}>Últimas aulas</h4>
-          <div className="calendario">
-            {r.historico.slice(-30).map((h) => (
-              <span key={h.data} className="cal-dia" title={`${fmtData(h.data)} — ${h.tipo === "P" ? "presente" : h.tipo === "F" ? `faltou (${h.h}h)` : `faltou ${h.h}h`}`}
-                style={{ background: { P: "#10B981", F: "#EF4444", H: "#F59E0B" }[h.tipo], width: 26 }}>{h.tipo === "P" ? "" : `${String(h.h).replace(".", ",")}h`}</span>
-            ))}
-          </div>
-          <p className="small soft" style={{ margin: "6px 0 0" }}>Verde = presente · Vermelho = faltou o dia · Amarelo = faltou alguns horários</p>
+      <div className="cards" style={{ marginBottom: 16 }}>
+        <div className="card kpi cc-total"><div className="n" style={{ color: TIER_COR[linha.st.tier] }}>{fmtPct(r.pct)}</div><div className="l">Frequência atual</div></div>
+        <div className="card kpi cc-vermelho"><div className="n">{fmtHoras(r.horasFalta)}</div><div className="l">Horas de falta (limite {fmtHoras(r.limiteHoras)})</div></div>
+        <div className="card kpi cc-amarelo"><div className="n">{r.consecutivas}</div><div className="l">Faltas consecutivas</div></div>
+        <div className="card kpi" style={{ borderLeftColor: RISCO_COR[linha.risco.nivel] }}><div className="n" style={{ fontSize: 15 }}>{RISCO_LABEL[linha.risco.nivel]}</div><div className="l">Classificação de risco</div></div>
+      </div>
+
+      {r.limiteHoras !== null && (
+        <div style={{ background: "#F5F7FF", border: "1px solid #E3DEFB", borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 12.5 }}>
+          <strong>Cálculo inteligente</strong>
+          <ul style={{ margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.7 }}>
+            {r.faixa === "abaixo" ? (
+              <li>Frequência já abaixo de 75% ({fmtHoras(r.horasFalta)} de falta para um limite de {fmtHoras(r.limiteHoras)}) — <strong>não há recuperação matemática possível</strong> neste curso.</li>
+            ) : (
+              <>
+                <li>Ainda pode faltar até <strong>{fmtHoras(r.horasRestantes)}</strong> ({diasRestantes >= 1 ? `~${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"} de aula` : "menos de 1 dia de aula"}) sem cair abaixo de 75%.</li>
+                {r.projecaoPct !== null && <li>Mantendo o ritmo atual de faltas, a frequência projetada ao final do curso é de <strong>{fmtPct(r.projecaoPct)}</strong>{r.projecaoPct < 75 ? " ⚠ (projeção abaixo do mínimo)" : ""}.</li>}
+              </>
+            )}
+            <li>{r.aulas} aulas registradas · {r.diasFalta} dia(s) de falta inteira · {r.diasParcial} dia(s) com falta em alguns horários.</li>
+          </ul>
         </div>
       )}
 
-      <div style={{ marginBottom: 14 }}>
-        <h4 style={{ marginBottom: 6 }}>Observações da Supervisão</h4>
-        <textarea className="input" disabled={!pode("contatos")} placeholder="Anotações sobre o aluno" value={obs ?? contato.observacoes ?? ""} onChange={(e) => setObs(e.target.value)} />
-        {obs !== null && obs !== (contato.observacoes ?? "") && <button className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={async () => { await acoes.atualizarAcompanhamento(turma, aluno, { observacoes: obs }); setObs(null); }}><Save size={12} /> Salvar</button>}
-      </div>
+      {r.historico.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <strong style={{ fontSize: 12.5 }}>Últimas aulas</strong>
+          <div className="calendario" style={{ marginTop: 6 }}>
+            {r.historico.slice(-30).map((h) => (
+              <span key={h.data} className="cal-dia" title={`${fmtData(h.data)} — ${h.tipo === "P" ? "presente" : `${h.h}h de falta`}`} style={{ background: { P: "#10B981", F: "#EF4444", H: "#F59E0B" }[h.tipo], width: 26 }}>{h.tipo === "P" ? "" : `${h.h}h`}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <h4 style={{ marginBottom: 8 }}>Histórico ({linhaTempo.length})</h4>
-      {!linhaTempo.length ? <p className="small soft">Nenhum contato registrado ainda.</p> : (
-        <div className="timeline">
-          {linhaTempo.slice(0, 50).map((e, i) => (
-            <div key={i} className="tl-item" style={{ "--tl": e.cor }}>
-              <div style={{ fontWeight: 600 }}>{e.titulo}</div>
-              {e.texto?.map((t, j) => <div key={j} className="small">{t}</div>)}
-              <div className="q">{e.hora ? fmtDataHora(e.em) : ""}{e.quem ? ` · ${e.quem}` : ""}</div>
+      {outras.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <strong style={{ fontSize: 12.5 }}>Também matriculado em</strong>
+          {outras.map((x) => (
+            <div key={x.key} className="row small" style={{ justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--line)" }}>
+              <span>{x.turma.curso} ({x.turma.codigo})</span><strong style={{ color: TIER_COR[x.st.tier] }}>{fmtPct(x.r.pct)}</strong>
             </div>
           ))}
         </div>
       )}
-    </Modal>
-  );
-}
 
-// ---------------------------------------------------------------- REGISTRAR CONTATO
-const STATUS_POR_RESULTADO = {
-  "Conversou com o aluno": "Em acompanhamento",
-  "Aguardando retorno": "Aguardando retorno",
-  "Não atendeu / sem resposta": "Aguardando retorno",
-  "Aluno vai retornar às aulas": "Em acompanhamento",
-  "Aluno informou desistência": "Evadido",
-};
-
-export function ContatoModal({ turmaId, alunoId }) {
-  const { turma, aluno, linha } = useTurmaAluno(turmaId, alunoId);
-  const { cfg, hoje, acoes } = useData();
-  const ui = useUI();
-  const [f, setF] = useState({ data: hoje, forma: "WhatsApp", resultado: "Conversou com o aluno", obs: "", proximaData: "", justificativa: "", encaminhamento: "" });
-  const [salvando, setSalvando] = useState(false);
-  if (!turma || !aluno) return null;
-  const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
-  const novoStatus = STATUS_POR_RESULTADO[f.resultado];
-  const wa = waLink(aluno.telefone, textoWhats(aluno, turma, cfg));
-
-  async function salvar() {
-    setSalvando(true);
-    await acoes.registrarContato(turma, aluno, { ...f, motivo: linha?.r.motivo || "", novoStatus, resolverPendencias: f.resultado !== "Não atendeu / sem resposta" });
-    setSalvando(false);
-    ui.fechar();
-  }
-  return (
-    <Modal onClose={ui.fechar} icone={<ClipboardCheck size={18} />} titulo="Registrar contato" subtitulo={`${aluno.nome} · ${turma.curso}${linha ? ` · ${fmtPct(linha.r.pct)}` : ""}`}
-      footer={<><button className="btn btn-ghost" onClick={ui.fechar}>Cancelar</button><button className="btn btn-primary" disabled={salvando} onClick={salvar}><Save size={14} /> Salvar</button></>}>
-      <div className="row" style={{ marginBottom: 14 }}>
-        {wa && <a className="btn btn-ghost btn-sm" target="_blank" rel="noreferrer" href={wa} onClick={() => set("forma", "WhatsApp")}><MessageCircle size={12} /> Abrir WhatsApp</a>}
-        {telLink(aluno.telefone) && <a className="btn btn-ghost btn-sm" href={telLink(aluno.telefone)} onClick={() => set("forma", "Ligação")}><Phone size={12} /> Ligar</a>}
-        {!aluno.telefone && !aluno.email && <span className="aviso" style={{ padding: "6px 10px" }}><AlertTriangle size={13} /> Sem telefone e sem e-mail. <button className="link-aluno" onClick={() => ui.abrirAluno(turma.id, aluno.id)}>Cadastrar</button></span>}
-      </div>
-      <div className="campo" style={{ marginBottom: 12 }}><span>Como foi o contato</span>
-        <div className="pills">{FORMAS_CONTATO.map((x) => <button key={x} type="button" className={"pill" + (f.forma === x ? " on" : "")} onClick={() => set("forma", x)}>{x}</button>)}</div>
-      </div>
-      <div className="grid-form">
-        <label className="campo"><span>Resultado</span><select className="select" value={f.resultado} onChange={(e) => set("resultado", e.target.value)}>{RESULTADOS_CONTATO.map((x) => <option key={x}>{x}</option>)}</select></label>
-        <label className="campo"><span>Data</span><input type="date" className="input" value={f.data} max={hoje} onChange={(e) => set("data", e.target.value)} /></label>
-      </div>
-      <label className="campo" style={{ marginTop: 12 }}><span>O que o aluno disse / observação</span><textarea className="input" value={f.obs} onChange={(e) => set("obs", e.target.value)} placeholder="Ex.: dificuldade de conciliar trabalho e curso" /></label>
-      <label className="campo" style={{ marginTop: 12 }}><span>Falar de novo em (opcional)</span>
-        <span className="row" style={{ gap: 5 }}>
-          <input type="date" className="input" value={f.proximaData} min={hoje} onChange={(e) => set("proximaData", e.target.value)} />
-          {[2, 7].map((n) => <button type="button" key={n} className="pill" onClick={() => set("proximaData", addDias(hoje, n))}>+{n} dias</button>)}
-        </span>
-      </label>
-      <details style={{ marginTop: 12 }}>
-        <summary className="small" style={{ cursor: "pointer", fontWeight: 700 }}>Mais detalhes (justificativa e encaminhamento)</summary>
-        <div className="grid-form" style={{ marginTop: 10 }}>
-          <label className="campo"><span>Justificativa apresentada</span><input className="input" value={f.justificativa} onChange={(e) => set("justificativa", e.target.value)} /></label>
-          <label className="campo"><span>Encaminhamento</span><input className="input" value={f.encaminhamento} onChange={(e) => set("encaminhamento", e.target.value)} /></label>
+      <strong style={{ fontSize: 12.5 }}>Histórico de intervenções ({(contato.tentativas || []).length})</strong>
+      {!(contato.tentativas || []).length ? <div className="small soft" style={{ margin: "8px 0 0" }}>Nenhuma intervenção registrada ainda.</div> : (
+        <div style={{ marginTop: 8 }}>
+          {contato.tentativas.map((t, i) => (
+            <div key={i} className="small" style={{ padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
+              <strong>{fmtData(t.data)}</strong> — {t.tipo || t.forma || "Contato"} {t.obs ? `· ${t.obs}` : ""} {t.resultado ? <em className="soft"> (resultado: {t.resultado})</em> : ""}
+            </div>
+          ))}
         </div>
-      </details>
-      <p className="small soft" style={{ marginBottom: 0 }}>Ao salvar, o acompanhamento do aluno muda para <strong>{novoStatus}</strong>{f.resultado !== "Não atendeu / sem resposta" ? " e a pendência sai da lista" : ""}.</p>
+      )}
+      {pode("contatos") && <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => ui.abrirContato(turma.id, aluno.id)}><ClipboardCheck size={12} /> Registrar novo acompanhamento</button>}
     </Modal>
   );
 }

@@ -111,6 +111,8 @@ export default function DataProvider({ children }) {
   // usa sempre o estado mais recente; se uma execução estiver em andamento, agenda outra ao final
   const estadoRef = useRef({});
   estadoRef.current = { turmas, freq, alertas, cfg, usuario };
+  const contatosRef = useRef({});
+  contatosRef.current = contatos;
   const autoCtl = useRef({ rodando: false, de_novo: false });
   const autoTimer = useRef(null);
   const rodarAutomacao = useCallback(async () => {
@@ -326,6 +328,56 @@ export default function DataProvider({ children }) {
       const res = await enviarERegistrar({ turma, aluno, assunto, texto, cfg, motivo: alerta.titulo, modelo: "Alerta de faltas consecutivas (reenvio manual)", automatico: false, alertaId: alerta.id, usuario });
       await DB.atualizarAlerta(alerta.id, res.ok ? { emailStatus: "enviado", emailEnviadoEm: DB.agoraISO(), emailLogId: res.logId, contatoManual: false } : { emailStatus: "erro", emailErro: res.erro, emailLogId: res.logId });
       toast(res.ok ? "E-mail enviado." : `Falha: ${res.erro}`, res.ok ? "ok" : "erro");
+    }),
+
+    // ---------- acompanhamento no formato do protótipo (Contato com alunos) ----------
+    contatoDe: (turmaId, alunoId) => contatosRef.current[`${turmaId}|${alunoId}`] || { tentativas: [], encaminhamento: "", status: "", justificativa: "", motivoFalta: "", orientacoes: "", concluido: false },
+    atualizarContato: seguro(async (turma, aluno, patch, descricao) => {
+      if (!exigir("contatos")) return;
+      const k = `${turma.id}|${aluno.id}`;
+      const { _id, ...atual } = contatosRef.current[k] || { tentativas: [] };
+      const novo = { ...atual, tentativas: atual.tentativas || [], ...patch };
+      contatosRef.current = { ...contatosRef.current, [k]: novo };
+      await DB.salvarContato(turma.id, aluno.id, novo);
+      if (patch.concluido === true) {
+        const abertos = Object.values(alertas).filter((al) => al.turmaId === turma.id && al.alunoId === aluno.id && al.status === "aberto");
+        for (const al of abertos) await DB.atualizarAlerta(al.id, { status: "resolvido", resolvidoEm: DB.agoraISO(), resolvidoPor: quem, resolucao: "Acompanhamento finalizado" });
+      }
+      if (descricao) await log({ tipo: "contato", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso, descricao });
+    }),
+    adicionarTentativa: seguro(async (turma, aluno) => {
+      if (!exigir("contatos")) return;
+      const atual = acoes.contatoDe(turma.id, aluno.id);
+      const tentativas = [...(atual.tentativas || []), { id: novoId(), data: todayISO(), tipo: "Ligação", responsavel: usuario?.nome || quem, ligacao: false, email: false, whatsapp: false, obs: "", resultado: "", criadoPor: quem, criadoEm: DB.agoraISO() }];
+      await acoes.atualizarContato(turma, aluno, { tentativas, ...(atual.status ? {} : { status: "Aguardando retorno" }), concluido: false }, `${tentativas.length}ª tentativa de contato registrada`);
+    }),
+    atualizarTentativa: seguro(async (turma, aluno, idx, patch) => {
+      const atual = acoes.contatoDe(turma.id, aluno.id);
+      const tentativas = (atual.tentativas || []).map((t, i) => (i === idx ? { ...t, ...patch } : t));
+      await acoes.atualizarContato(turma, aluno, { tentativas });
+    }),
+    marcarEvadido: seguro(async (turma, aluno) => {
+      if (!exigir("contatos")) return;
+      const ok = await confirmar({ titulo: "Marcar como evadido?", texto: `${aluno.nome} sai das pendências e da chamada ativa. Todo o histórico continua disponível na ficha do aluno.`, botao: "Marcar como evadido", perigo: true });
+      if (!ok) return;
+      await acoes.atualizarContato(turma, aluno, { status: "Evadido", concluido: true }, "Acompanhamento encerrado: aluno evadido");
+      await acoes.updateAlunoSituacao(turma, aluno, "Evadiu");
+    }),
+    updateAlunoSituacao: seguro(async (turma, aluno, situacao) => {
+      if (!exigir("contatos")) return;
+      const anterior = aluno.situacao || "Ativo";
+      if (anterior === situacao) return;
+      await DB.alterarAlunos(turma.id, (lista) => lista.map((a) => (a.id === aluno.id ? { ...a, situacao, statusAcomp: null, statusEm: DB.agoraISO() } : a)));
+      await log({ tipo: "status", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso, descricao: `Situação do aluno: ${anterior} → ${situacao}` });
+      if (situacao !== "Ativo") {
+        const abertos = Object.values(alertas).filter((al) => al.turmaId === turma.id && al.alunoId === aluno.id && al.status === "aberto");
+        for (const al of abertos) await DB.atualizarAlerta(al.id, { status: "resolvido", resolvidoEm: DB.agoraISO(), resolvidoPor: quem, resolucao: `Aluno ${situacao}` });
+      }
+      toast(`Situação alterada para "${situacao}".`);
+    }),
+    alternarFinalizada: seguro(async (turma) => {
+      if (isFinalizada(turma)) return acoes.reabrirTurma(turma);
+      return acoes.finalizarTurma(turma, turma.periodoRealFim || todayISO());
     }),
 
     // importação

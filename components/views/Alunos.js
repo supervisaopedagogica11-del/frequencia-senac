@@ -14,6 +14,8 @@ const FILTROS = [
   ["seguidas", "Faltas seguidas"], ["contato", "Necessita contato"], ["evadidos", "Evadidos"], ["semEmail", "Sem e-mail"],
 ];
 
+const EXTRAS = { regular: "Regular", f7580: "Entre 75% e 80%", f8090: "Entre 80% e 90%", f90: "Acima de 90%", acomp: "Acompanhar", evasao: "Risco de evasão" };
+
 export default function Alunos({ turmaId }) {
   const { linhas, turmas, cfg, pode } = useData();
   const ui = useUI();
@@ -36,6 +38,12 @@ export default function Alunos({ turmaId }) {
         case "contato": return l.status === "Necessita contato";
         case "evadidos": return l.status === "Evadido";
         case "semEmail": return l.ativo && !l.aluno.email;
+        case "regular": return l.ativo && l.r.faixa === "regular";
+        case "f7580": return l.ativo && l.r.pct !== null && l.r.pct >= 75 && l.r.pct < 80;
+        case "f8090": return l.ativo && l.r.pct !== null && l.r.pct >= 80 && l.r.pct < 90;
+        case "f90": return l.ativo && l.r.pct !== null && l.r.pct >= 90;
+        case "acomp": return l.ativo && ["Necessita contato", "Em acompanhamento", "Aguardando retorno"].includes(l.status);
+        case "evasao": return l.ativo && (l.r.faixa === "abaixo" || l.r.consecutivas >= cfg.consecutivasAlerta);
         default: return l.ativo;
       }
     }).sort((a, b) => (f === "todos" ? a.aluno.nome.localeCompare(b.aluno.nome) : b.prioridade - a.prioridade));
@@ -57,6 +65,7 @@ export default function Alunos({ turmaId }) {
       {!turmaId && <div className="page-header"><div><h2>Alunos</h2><p>Frequência, faltas e situação de cada aluno</p></div></div>}
       <div className="pills" style={{ marginBottom: 10 }}>
         {FILTROS.map(([k, l]) => <button key={k} className={"pill" + (f === k ? " on" : "")} onClick={() => setF(k)}>{l}</button>)}
+        {EXTRAS[f] && <button className="pill on">{EXTRAS[f]}</button>}
       </div>
       <div className="row" style={{ marginBottom: 12 }}>
         <div style={{ position: "relative", flex: "1 1 220px" }}>

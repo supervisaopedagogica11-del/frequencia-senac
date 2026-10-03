@@ -67,17 +67,11 @@ export default function Configuracoes() {
       {aba === "geral" && (
         <div className="card">
           <div className="aviso info" style={{ marginBottom: 6 }}>Regra de aprovação: mínimo de <strong>&nbsp;75% de frequência&nbsp;</strong> na carga horária total do curso. As faltas são contadas em horas.</div>
-          <Linha titulo="Avisar “Em risco” quando o aluno já usou" desc="das horas de falta permitidas (25% da carga horária). Ex.: curso de 160h permite 40h; com 60% o aviso aparece a partir de 24h de falta.">
-            <span className="row" style={{ flexWrap: "nowrap" }}><input type="number" className="input" style={{ width: 70 }} min={10} max={95} disabled={!admin} value={f.usoAlerta} onChange={(e) => set("usoAlerta", Number(e.target.value) || 60)} /> %</span>
-          </Linha>
-          <Linha titulo="Alerta de faltas seguidas" desc="Quantos dias seguidos de falta geram uma pendência de contato.">
+                    <Linha titulo="Quantas faltas seguidas geram alerta" desc="Dias de falta inteira, em sequência.">
             <span className="row" style={{ flexWrap: "nowrap" }}><input type="number" className="input" style={{ width: 70 }} min={2} max={10} disabled={!admin} value={f.consecutivasAlerta} onChange={(e) => set("consecutivasAlerta", Number(e.target.value) || 3)} /> dias</span>
           </Linha>
-          <Linha titulo="Criar pendência por faltas seguidas" desc="O aluno entra em Pendências com a situação “Necessita contato”.">
+          <Linha titulo="Alerta de faltas seguidas" desc="O aluno entra em Contato com alunos e na Agenda do dia, com registro no histórico.">
             <Switch checked={f.automacoes.alertaConsecutivas} disabled={!admin} onChange={(v) => setIn("automacoes", "alertaConsecutivas", v)} />
-          </Linha>
-          <Linha titulo="Criar pendência quando entrar em risco ou ficar abaixo de 75%" desc="Uma vez para cada nível — não fica repetindo.">
-            <Switch checked={f.automacoes.alertaRisco} disabled={!admin} onChange={(v) => setIn("automacoes", "alertaRisco", v)} />
           </Linha>
           <Linha titulo="Nome da instituição">
             <input className="input" style={{ width: 240 }} disabled={!admin} value={f.instituicao} onChange={(e) => set("instituicao", e.target.value)} />

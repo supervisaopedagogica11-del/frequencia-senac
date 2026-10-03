@@ -1,2 +1,3 @@
-import { redirect } from "next/navigation";
-export default function Page() { redirect("/agenda"); }
+"use client";
+import V from "@/components/views/Contatos";
+export default function Page() { return <V />; }
