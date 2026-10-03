@@ -1,79 +1,103 @@
-# Sistema de Frequência — Senac Três Corações
+# Frequência e Permanência — Senac Três Corações (versão 2.0)
 
-Este é o código completo do sistema, já pronto para virar um site de verdade,
-com banco de dados no Firebase e login para a Supervisão Pedagógica.
+Sistema da Supervisão Pedagógica para **prevenir a reprovação por faltas**, acompanhar a frequência
+antes que ela chegue a 75%, controlar a evasão, registrar intervenções e automatizar comunicações.
 
-Siga os passos NA ORDEM. Cada um leva poucos minutos.
-
----
-
-## Parte 1 — Configurar o Firebase (banco de dados + login)
-
-1. Acesse https://console.firebase.google.com e entre com sua conta Google (a mesma que você já usa).
-2. Clique em **"Adicionar projeto"**, dê um nome (ex: `senac-frequencia`) e siga os passos padrão (pode desativar o Google Analytics, não é necessário).
-3. Dentro do projeto, no menu lateral esquerdo, clique em **Compilação (Build) → Firestore Database**.
-   - Clique em **"Criar banco de dados"**.
-   - Escolha a localização **`southamerica-east1` (São Paulo)**, se disponível — deixa tudo mais rápido pra vocês.
-   - Inicie em **modo de produção**.
-4. Ainda no menu lateral, vá em **Compilação → Authentication**.
-   - Clique em **"Vamos começar"**.
-   - Na lista de provedores, ative **"E-mail/senha"**.
-5. Ainda em Authentication, vá na aba **"Users"** e clique em **"Add user"** para criar o primeiro login da Supervisão Pedagógica (o e-mail e senha que você vai usar para entrar no sistema). Repita para cada pessoa da equipe que for usar.
-6. Agora vá em **Configurações do projeto** (ícone de engrenagem, no topo do menu lateral) → aba **Geral** → role até **"Seus aplicativos"** → clique no ícone `</>` (Web) para registrar um app.
-   - Dê um nome (ex: `senac-frequencia-web`) e clique em registrar.
-   - Ele vai mostrar um bloco de código com `firebaseConfig = { apiKey: "...", ... }`. **Guarde essa tela aberta**, você vai precisar desses valores daqui a pouco.
-7. Por fim, aplique as regras de segurança: vá em **Firestore Database → Regras**, apague o conteúdo e cole o conteúdo do arquivo `firestore.rules` que está junto com este projeto. Clique em **"Publicar"**.
-   - Isso garante que só quem tem login (criado por você no passo 5) consegue ver ou alterar os dados dos alunos.
-
-## Parte 2 — Colocar o código no GitHub (sem usar linha de comando)
-
-O GitHub é só um lugar para guardar o código na internet, de onde a Vercel publica o site automaticamente.
-
-1. Acesse https://github.com e crie uma conta gratuita (se ainda não tiver).
-2. Clique no **"+"** no canto superior direito → **"New repository"**.
-3. Dê um nome, por exemplo `senac-frequencia`. Deixe como **Private** (privado). Clique em **"Create repository"**.
-4. Na página do repositório recém-criado, clique no link **"uploading an existing file"** (ou vá em **Add file → Upload files**).
-5. Arraste TODOS os arquivos e pastas deste projeto para a área de upload (a pasta inteira que você recebeu de mim).
-   - Importante: **não** envie o arquivo `.env.local` se você chegar a criá-lo — ele tem senhas. Envie o `.env.local.example` normalmente, sem problema.
-6. Role para baixo e clique em **"Commit changes"**. Pronto, o código está no GitHub.
-
-## Parte 3 — Publicar na Vercel
-
-1. Acesse https://vercel.com e entre com sua conta.
-2. Clique em **"Add New" → "Project"**.
-3. Escolha **"Import Git Repository"** e selecione o repositório `senac-frequencia` que você acabou de criar (a Vercel vai pedir para conectar com o GitHub na primeira vez — autorize).
-4. Antes de clicar em "Deploy", abra a seção **"Environment Variables"** e adicione uma por uma, usando os valores que você guardou no Passo 6 da Parte 1:
-
-   | Nome (copie exatamente) | Valor |
-   |---|---|
-   | `NEXT_PUBLIC_FIREBASE_API_KEY` | o `apiKey` do Firebase |
-   | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | o `authDomain` |
-   | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | o `projectId` |
-   | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | o `storageBucket` |
-   | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | o `messagingSenderId` |
-   | `NEXT_PUBLIC_FIREBASE_APP_ID` | o `appId` |
-
-5. Clique em **"Deploy"**. Em 1-2 minutos a Vercel te dá um link (algo como `senac-frequencia.vercel.app`) — esse é o site de vocês, no ar.
-6. Entre com o e-mail/senha que você criou no Passo 5 da Parte 1.
-
-## Sempre que eu te der um código atualizado
-
-Quando eu fizer melhorias, vou te passar os arquivos novos/alterados. Para atualizar o site:
-1. No GitHub, abra o arquivo que mudou → ícone de lápis (editar) → cole o novo conteúdo → Commit.
-   - Ou: **Add file → Upload files** de novo, para vários arquivos de uma vez (o GitHub substitui os que já existem).
-2. A Vercel detecta a mudança sozinha e publica a nova versão automaticamente, em 1-2 minutos. Você não precisa fazer nada na Vercel.
+Tecnologias: Next.js 14 · Firebase (Authentication + Firestore) · Vercel.
+Os dados da versão anterior (turmas, frequências e contatos) continuam valendo — o formato foi mantido.
 
 ---
 
-## O que já funciona nesta primeira versão
+## O que o sistema faz
 
-- Login (Supervisão Pedagógica)
-- Importar planilha (mesmo formato do Senac)
-- Chamada (falta/atraso/justificada, incluir aluno manualmente)
-- Painel (indicadores e alunos que precisam de atenção)
+**Menu lateral**
+- Painel Geral · Agenda · Gestão de Permanência · Frequência/Chamadas · Contatos · Relatórios
+- Turmas organizadas por **Manhã / Tarde / Noite** e **Turmas Finalizadas** (com bolinha de cor = situação mais grave da turma)
+- Busca global por aluno, turma, código, docente, e-mail ou matrícula
+- Importar planilha · Usuários/Equipe · Configurações
 
-## O que ainda falta portar (próxima etapa)
+**Ao abrir uma turma**: Painel · Agenda do dia · Alunos · Chamada/Frequência · Gestão de permanência · Contatos · Relatórios · ⚙️ Configurações da turma
+(tipo FIC/Técnico, carga horária diária e total, docente, datas de início, previsão e encerramento real, finalizar, reabrir e excluir com confirmação).
 
-Agenda do dia, Gestão de Permanência, Contato com Alunos (ligação/e-mail/WhatsApp),
-Ficha do Aluno, exportação em Excel/PDF, busca global. Tudo isso já existe e funciona
-no protótipo (artefato) — é "só" trazer para cá. Me avise quando quiser que eu continue.
+**Prevenção (o coração do sistema)** — para cada aluno, calculado com a carga horária da turma:
+- frequência atual, faltas, atrasos, justificadas, faltas consecutivas
+- aulas/horas restantes e **quantas faltas ainda pode ter** sem cair abaixo de 75%
+- **presença necessária** nas aulas restantes
+- **projeção** ao final do curso mantendo o ritmo de faltas (usa o ritmo das últimas 10 aulas)
+- faixa: **Regular · Atenção · Risco · Crítico · Abaixo do mínimo** (limites configuráveis) + ação recomendada
+
+**Automações** (ligar/desligar em Configurações)
+- 3 faltas consecutivas → alerta com data/hora, registro no histórico, pendência na Agenda, situação “Necessita contato”
+- e-mail automático para o e-mail cadastrado do aluno — **uma única vez por episódio** (não repete ao recarregar a tela);
+  uma nova sequência de faltas depois de uma presença gera um novo episódio
+- falha no envio ou aluno sem e-mail → pendência de contato manual
+- aluno entrou nas faixas Risco / Crítico / Abaixo → alerta preventivo (uma vez por faixa)
+- turma que costuma ter aula no dia e está sem chamada → aviso na Agenda
+
+**Perfis de acesso**: Administrador · Coordenação · Supervisão · Consulta.
+
+---
+
+## Passo a passo para publicar esta versão
+
+### 1. Enviar o código (GitHub Desktop)
+1. Abra o **GitHub Desktop** — ele vai mostrar a lista de arquivos alterados.
+2. Embaixo, à esquerda, escreva um resumo (ex.: `Versão 2.0 – sistema completo`) e clique em **Commit to main**.
+3. Clique em **Push origin** (no topo). A Vercel publica sozinha em 1–3 minutos.
+
+Arquivos da versão 1 que **não são mais usados** e podem ser apagados da pasta (opcional — não atrapalham):
+`lib/firestoreData.js`, `lib/logic.js`, `lib/useAuth.js`, `components/ConfigurarTurmaModal.jsx`, `components/FichaAlunoModal.jsx`.
+
+### 2. Primeiro acesso e cadastro da equipe
+1. Abra o site e entre com o seu login de sempre. **A primeira pessoa que entrar nesta versão vira Administradora** — faça isso você mesma.
+2. Vá em **Usuários/Equipe → Cadastrar usuário** e cadastre cada pessoa (nome, e-mail, perfil).
+   - Quem **já tinha login** (criado no Firebase) entra normalmente com a mesma senha depois de cadastrado aqui.
+   - Quem **não tinha login** entra em **“Primeiro acesso”** com o e-mail cadastrado e cria a própria senha (isso vincula o e-mail ao sistema).
+   - Esqueceu a senha? **“Esqueci a senha”** na tela de login.
+3. Abra cada turma pela **engrenagem ⚙️** e confira tipo, carga horária diária e total, docente e datas.
+4. Em **Alunos**, confira os e-mails dos alunos (o sistema avisa quem está sem e-mail).
+
+### 3. Regras de segurança do banco (recomendado, depois do passo 2)
+Firebase Console → **Firestore Database → Regras** → apague tudo, cole o conteúdo do arquivo `firestore.rules` → **Publicar**.
+A partir daí, só quem está cadastrado e ativo em Usuários/Equipe acessa os dados, e cada perfil só faz o que pode.
+
+### 4. E-mail automático (Outlook / Microsoft 365)
+O envio é feito pelo servidor da Vercel. Escolha **uma** das opções e cadastre as variáveis em
+**Vercel → projeto → Settings → Environment Variables** (marque Production, Preview e Development). Depois, em
+**Deployments**, clique nos três pontinhos do último deploy → **Redeploy**.
+
+**Opção A — Microsoft Graph (recomendada; pode precisar do TI do Senac)**
+1. Acesse https://entra.microsoft.com → **Aplicativos → Registros de aplicativo → Novo registro** (nome: `Frequencia Senac`).
+2. **Permissões de API → Adicionar → Microsoft Graph → Permissões de aplicativo → `Mail.Send`** → **Conceder consentimento do administrador**.
+3. **Certificados e segredos → Novo segredo do cliente** → copie o **Valor**.
+4. Cadastre na Vercel:
+
+| Variável | Valor |
+|---|---|
+| `MS_TENANT_ID` | “ID do diretório (locatário)” |
+| `MS_CLIENT_ID` | “ID do aplicativo (cliente)” |
+| `MS_CLIENT_SECRET` | o valor do segredo |
+| `EMAIL_REMETENTE` | a caixa que vai enviar, ex.: `supervisao@...` |
+
+**Opção B — SMTP (mais simples, mas temporária)**
+A Microsoft vai desligar por padrão o envio por SMTP com senha nas contas Microsoft 365 a partir do fim de dezembro de 2026.
+Use apenas se a opção A não for possível agora.
+
+| Variável | Valor |
+|---|---|
+| `SMTP_HOST` | `smtp.office365.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | o e-mail que envia |
+| `SMTP_PASS` | a senha (ou senha de app) |
+| `EMAIL_REMETENTE` | o mesmo e-mail |
+
+5. No sistema: **Configurações → E-mail automático** → confira remetente, assunto e modelo → **Enviar teste** →
+   ligue **“E-mail automático ao aluno”** → **Salvar configurações**.
+
+---
+
+## Para desenvolvedores
+- `npm install` · `npm run dev` · `npm test` (testes do motor de cálculo em `tests/engine.test.js`)
+- `MOCK_FIREBASE=1 npm run dev` roda a interface com um banco de testes em memória (pasta `tests/mock`), sem tocar no Firebase real.
+- Coleções do Firestore: `turmas`, `frequencias`, `contatos` (formato da v1) + `alertas`, `emails`, `historico`, `usuarios`, `config`.
+- Regras de cálculo: `lib/engine.js` · automações: `lib/automacao.js` · agenda: `lib/pendencias.js` · envio: `app/api/email/route.js`.
