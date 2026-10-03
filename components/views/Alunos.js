@@ -1,49 +1,101 @@
 "use client";
-import { useState } from "react";
-import { UserPlus, Pencil, Eye, MailWarning, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Search, UserPlus, Pencil, ClipboardCheck, Download, MailWarning } from "lucide-react";
 import { useData } from "../DataProvider";
 import { useUI } from "../Shell";
-import { StatusChip, FaixaChip, Pct, Empty } from "../ui";
-import { normalizar } from "@/lib/engine";
+import { FaixaChip, StatusChip, Pct, FaltasBar, Empty } from "../ui";
+import { normalizar, isFinalizada } from "@/lib/engine";
+import { FAIXA_LABEL } from "@/lib/constants";
+import { exportarExcel } from "@/lib/exportar";
+
+const FILTROS = [
+  ["todos", "Todos"], ["atencao", "Precisam de atenção"], ["risco", "Em risco"], ["abaixo", "Abaixo de 75%"],
+  ["seguidas", "Faltas seguidas"], ["contato", "Necessita contato"], ["evadidos", "Evadidos"], ["semEmail", "Sem e-mail"],
+];
 
 export default function Alunos({ turmaId }) {
-  const { linhas, cfg, pode } = useData();
+  const { linhas, turmas, cfg, pode } = useData();
   const ui = useUI();
+  const sp = useSearchParams();
+  const [f, setF] = useState(sp?.get("f") || "todos");
   const [q, setQ] = useState("");
-  const ls = linhas.filter((l) => l.turma.id === turmaId && (!q || normalizar(l.aluno.nome + " " + l.aluno.email + " " + l.aluno.matricula).includes(normalizar(q)))).sort((a, b) => a.aluno.nome.localeCompare(b.aluno.nome));
-  const semEmail = linhas.filter((l) => l.turma.id === turmaId && l.ativo && !l.aluno.email).length;
+  const [turma, setTurma] = useState(turmaId || sp?.get("turma") || "");
+
+  const lista = useMemo(() => {
+    const nq = normalizar(q.trim());
+    return linhas.filter((l) => {
+      if (turma && l.turma.id !== turma) return false;
+      if (!turmaId && !turma && l.finalizada) return false;
+      if (nq && ![l.aluno.nome, l.aluno.email, l.aluno.matricula, l.turma.curso, l.turma.codigo].some((x) => normalizar(x).includes(nq))) return false;
+      switch (f) {
+        case "atencao": return l.ativo && ["risco", "abaixo"].includes(l.r.faixa);
+        case "risco": return l.ativo && l.r.faixa === "risco";
+        case "abaixo": return l.ativo && l.r.faixa === "abaixo";
+        case "seguidas": return l.ativo && l.r.consecutivas >= cfg.consecutivasAlerta;
+        case "contato": return l.status === "Necessita contato";
+        case "evadidos": return l.status === "Evadido";
+        case "semEmail": return l.ativo && !l.aluno.email;
+        default: return l.ativo;
+      }
+    }).sort((a, b) => (f === "todos" ? a.aluno.nome.localeCompare(b.aluno.nome) : b.prioridade - a.prioridade));
+  }, [linhas, f, q, turma, turmaId, cfg]);
+
+  const exportar = () => exportarExcel({
+    nome: `alunos_${f}`, aba: "Alunos", linhas: lista,
+    colunas: [
+      { titulo: "Aluno", valor: (l) => l.aluno.nome }, { titulo: "Turma", valor: (l) => l.turma.curso }, { titulo: "Código", valor: (l) => l.turma.codigo },
+      { titulo: "E-mail", valor: (l) => l.aluno.email }, { titulo: "Telefone", valor: (l) => l.aluno.telefone },
+      { titulo: "Frequência %", valor: (l) => l.r.pct }, { titulo: "Horas de falta", valor: (l) => l.r.horasFalta }, { titulo: "Limite de horas", valor: (l) => l.r.limiteHoras },
+      { titulo: "Pode faltar ainda (h)", valor: (l) => l.r.horasRestantes }, { titulo: "Faltas seguidas", valor: (l) => l.r.consecutivas },
+      { titulo: "Frequência", valor: (l) => FAIXA_LABEL[l.r.faixa] }, { titulo: "Situação", valor: (l) => l.status },
+    ],
+  });
+
   return (
     <>
-      <div className="row" style={{ marginBottom: 12 }}>
-        <div style={{ position: "relative", flex: "1 1 240px" }}>
-          <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--ink-soft)" }} />
-          <input className="input" style={{ width: "100%", paddingLeft: 30 }} placeholder="Buscar aluno, e-mail ou matrícula..." value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        {pode("editar") && <button className="btn btn-primary" onClick={() => ui.abrirAluno(turmaId, null)}><UserPlus size={14} /> Incluir aluno</button>}
+      {!turmaId && <div className="page-header"><div><h2>Alunos</h2><p>Frequência, faltas e situação de cada aluno</p></div></div>}
+      <div className="pills" style={{ marginBottom: 10 }}>
+        {FILTROS.map(([k, l]) => <button key={k} className={"pill" + (f === k ? " on" : "")} onClick={() => setF(k)}>{l}</button>)}
       </div>
-      {semEmail > 0 && <div className="aviso" style={{ marginBottom: 12 }}><MailWarning size={14} /> {semEmail} aluno(s) ativo(s) sem e-mail cadastrado — o e-mail automático não chega até eles. Clique em “Editar” para completar.</div>}
-      {!ls.length ? <Empty>Nenhum aluno.</Empty> : (
+      <div className="row" style={{ marginBottom: 12 }}>
+        <div style={{ position: "relative", flex: "1 1 220px" }}>
+          <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--ink-soft)" }} />
+          <input className="input" style={{ width: "100%", paddingLeft: 30 }} placeholder="Buscar por nome, e-mail ou matrícula..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        {!turmaId && (
+          <select className="select" value={turma} onChange={(e) => setTurma(e.target.value)} style={{ maxWidth: 260 }}>
+            <option value="">Todas as turmas ativas</option>
+            {turmas.map((t) => <option key={t.id} value={t.id}>{t.curso}{isFinalizada(t) ? " (finalizada)" : ""}</option>)}
+          </select>
+        )}
+        <button className="btn btn-ghost" onClick={exportar} disabled={!lista.length}><Download size={14} /> Excel</button>
+        {turmaId && pode("editar") && <button className="btn btn-primary" onClick={() => ui.abrirAluno(turmaId, null)}><UserPlus size={14} /> Incluir aluno</button>}
+      </div>
+      {!lista.length ? <Empty>Nenhum aluno neste filtro.</Empty> : (
         <div className="tabela-wrap">
           <table className="tabela responsiva">
-            <thead><tr><th>Aluno</th><th>Matrícula</th><th>Telefone</th><th>E-mail</th><th className="num">Frequência</th><th>Faixa</th><th>Situação</th><th></th></tr></thead>
+            <thead><tr><th>Aluno</th><th>Frequência</th><th>Faltas</th><th>Acompanhamento</th><th></th></tr></thead>
             <tbody>
-              {ls.map((l) => (
-                <tr key={l.key} style={{ opacity: l.ativo ? 1 : 0.6 }}>
-                  <td className="principal"><button className="link-aluno" onClick={() => ui.abrirFicha(turmaId, l.aluno.id)}>{l.aluno.nome}</button></td>
-                  <td data-label="Matrícula" className="small">{l.aluno.matricula || "—"}</td>
-                  <td data-label="Telefone" className="small">{l.aluno.telefone || "—"}</td>
-                  <td data-label="E-mail" className="small">{l.aluno.email || <span style={{ color: "var(--amarelo)", fontWeight: 600 }}>não cadastrado</span>}</td>
-                  <td className="num" data-label="Frequência"><Pct r={l.r} limite={cfg.limiteMinimo} /></td>
-                  <td data-label="Faixa"><FaixaChip faixa={l.r.faixa} /></td>
-                  <td data-label="Situação"><StatusChip status={l.status} /></td>
+              {lista.slice(0, 300).map((l) => (
+                <tr key={l.key}>
+                  <td className="principal">
+                    <div><button className="link-aluno" onClick={() => ui.abrirFicha(l.turma.id, l.aluno.id)}>{l.aluno.nome}</button>
+                      {!l.aluno.email && <MailWarning size={12} color="var(--amarelo)" style={{ marginLeft: 5, verticalAlign: "-1px" }} />}
+                      {!turmaId && <div className="small soft">{l.turma.curso}</div>}</div>
+                  </td>
+                  <td data-label="Frequência"><span className="row" style={{ gap: 6, flexWrap: "nowrap" }}><Pct r={l.r} /><FaixaChip faixa={l.r.faixa} small /></span></td>
+                  <td data-label="Faltas"><FaltasBar r={l.r} /></td>
+                  <td data-label="Acompanhamento"><StatusChip status={l.status} /></td>
                   <td className="num"><div className="row" style={{ gap: 4, justifyContent: "flex-end", flexWrap: "nowrap" }}>
-                    {pode("editar") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirAluno(turmaId, l.aluno.id)}><Pencil size={12} /> Editar</button>}
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => ui.abrirFicha(turmaId, l.aluno.id)} title="Ficha"><Eye size={13} /></button>
+                    {pode("contatos") && <button className="btn btn-ghost btn-sm" onClick={() => ui.abrirContato(l.turma.id, l.aluno.id)}><ClipboardCheck size={12} /> Contato</button>}
+                    {pode("editar") && <button className="btn btn-ghost btn-sm btn-icon" title="Editar cadastro" onClick={() => ui.abrirAluno(l.turma.id, l.aluno.id)}><Pencil size={12} /></button>}
                   </div></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {lista.length > 300 && <div className="small soft" style={{ padding: 10 }}>Mostrando 300 de {lista.length}. Use a busca para encontrar mais rápido.</div>}
         </div>
       )}
     </>

@@ -1,3 +1,2 @@
-"use client";
-import Importar from "@/components/views/Importar";
-export default function Page() { return <Importar />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/configuracoes?aba=importar"); }

@@ -147,19 +147,18 @@ export default function DataProvider({ children }) {
     sair: () => signOut(auth),
 
     // chamada
-    marcar: seguro(async (turma, data, aluno, status) => {
+    // registro = null (presente) | { status: "F" } (faltou o dia) | { status: "H", horas: [1, 2] } (faltou alguns horários)
+    definirRegistro: seguro(async (turma, data, aluno, registro) => {
       if (!exigir("chamada")) return;
-      const atual = (freq[`${turma.id}|${data}`] || {})[aluno.id];
-      const limpou = atual && atual.status === status;
-      await DB.marcarRegistro(turma.id, data, aluno.id, limpou ? null : { status, ...(atual?.horarioAtraso ? { horarioAtraso: atual.horarioAtraso } : {}), por: quem, em: DB.agoraISO() }, usuario);
-      const nomes = { F: "falta", A: "atraso", J: "falta justificada" };
-      await log({ tipo: "frequencia", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso,
-        descricao: limpou ? `${nomes[status][0].toUpperCase() + nomes[status].slice(1)} de ${fmtData(data)} removida (presente)` : `${nomes[status][0].toUpperCase() + nomes[status].slice(1)} registrada em ${fmtData(data)}${atual ? ` (antes: ${nomes[atual.status]})` : ""}` });
-    }),
-    setHorarioAtraso: seguro(async (turma, data, aluno, valor) => {
-      if (!exigir("chamada")) return;
-      const atual = (freq[`${turma.id}|${data}`] || {})[aluno.id] || { status: "A" };
-      await DB.marcarRegistro(turma.id, data, aluno.id, { ...atual, horarioAtraso: valor ? parseInt(valor, 10) : null }, usuario);
+      const hd = Number(turma.horariosPorDia) || 1;
+      let rec = registro;
+      if (rec?.status === "H") {
+        const horas = [...new Set(rec.horas || [])].filter((h) => h >= 1 && h <= hd).sort((x, y) => x - y);
+        rec = !horas.length ? null : horas.length >= hd ? { status: "F" } : { status: "H", horas };
+      }
+      await DB.marcarRegistro(turma.id, data, aluno.id, rec ? { ...rec, por: quem, em: DB.agoraISO() } : null, usuario);
+      const desc = !rec ? "Presente" : rec.status === "F" ? `Falta o dia todo (${hd}h)` : `Falta nos horários ${rec.horas.map((h) => h + "º").join(", ")} (${rec.horas.length}h)`;
+      await log({ tipo: "frequencia", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso, descricao: `Chamada de ${fmtData(data)}: ${desc}` });
     }),
     confirmarChamada: seguro(async (turma, data) => {
       if (!exigir("chamada")) return;

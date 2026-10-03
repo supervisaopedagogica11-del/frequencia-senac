@@ -9,18 +9,20 @@ export function StatusChip({ status }) {
   const c = STATUS_ALUNO_COR[status] || "#6B7280";
   return <span className="chip-out" style={{ color: c, borderColor: c }}>{status}</span>;
 }
-export function Pct({ r, limite = 75, mostrarBarra = true }) {
+// frequência atual em destaque (cor = situação)
+export function Pct({ r }) {
   if (!r || r.pct === null || r.pct === undefined) return <span className="soft">—</span>;
-  const cor = FAIXA_COR[r.faixa];
+  return <strong className="mono" style={{ color: FAIXA_COR[r.faixa] }}>{String(r.pct).replace(".", ",")}%</strong>;
+}
+// horas de falta usadas x permitidas (barra enche até o limite de 25% da carga horária)
+export function FaltasBar({ r, largura = 110 }) {
+  if (!r || r.limiteHoras === null || r.limiteHoras === undefined) return <span className="soft">—</span>;
+  const uso = Math.min(100, (r.horasFalta / (r.limiteHoras || 1)) * 100);
+  const n = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
-      {mostrarBarra && (
-        <span className="meter" style={{ width: 70 }} title={`Limite mínimo: ${limite}%`}>
-          <div style={{ width: `${Math.max(0, Math.min(100, r.pct))}%`, background: cor }} />
-          <span className="marca" style={{ left: `${limite}%` }} />
-        </span>
-      )}
-      <strong className="mono" style={{ color: cor }}>{String(r.pct).replace(".", ",")}%</strong>
+    <span style={{ display: "inline-flex", flexDirection: "column", gap: 3, minWidth: largura }} title={`${n(r.horasFalta)}h de falta · limite ${n(r.limiteHoras)}h (25% de ${r.cargaHoraria}h)`}>
+      <span className="small"><strong>{n(r.horasFalta)}h</strong> <span className="soft">de {n(r.limiteHoras)}h</span></span>
+      <span className="meter" style={{ width: largura }}><div style={{ width: `${uso}%`, background: FAIXA_COR[r.faixa] }} /></span>
     </span>
   );
 }
@@ -59,24 +61,5 @@ export function Switch({ checked, onChange, disabled }) {
       <input type="checkbox" checked={!!checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span />
     </label>
-  );
-}
-export function DistribuicaoFaixas({ cont, total }) {
-  const ordem = ["regular", "atencao", "risco", "critico", "abaixo"];
-  const t = total || ordem.reduce((s, k) => s + (cont[k] || 0), 0);
-  if (!t) return null;
-  return (
-    <div>
-      <div className="barra" style={{ height: 12 }}>
-        {ordem.map((k) => cont[k] ? <div key={k} title={`${FAIXA_LABEL[k]}: ${cont[k]}`} style={{ width: `${(cont[k] / t) * 100}%`, background: FAIXA_COR[k] }} /> : null)}
-      </div>
-      <div className="row" style={{ marginTop: 8, gap: 14 }}>
-        {ordem.map((k) => (
-          <span key={k} className="small" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: FAIXA_COR[k] }} />{FAIXA_LABEL[k]} <strong>{cont[k] || 0}</strong>
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }

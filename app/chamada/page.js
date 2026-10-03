@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function Page() { redirect("/frequencia"); }
+export default function Page() { redirect("/painel"); }

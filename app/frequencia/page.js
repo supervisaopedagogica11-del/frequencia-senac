@@ -1,3 +1,2 @@
-"use client";
-import Frequencia from "@/components/views/Frequencia";
-export default function Page() { return <Frequencia />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/alunos"); }

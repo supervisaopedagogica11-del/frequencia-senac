@@ -4,7 +4,7 @@ import { Upload, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { useData } from "../DataProvider";
 import { parsePlanilha } from "@/lib/importar";
 
-export default function Importar() {
+export default function Importar({ embutido }) {
   const { acoes, pode } = useData();
   const ref = useRef(null);
   const [msg, setMsg] = useState(null);
@@ -33,7 +33,7 @@ export default function Importar() {
 
   return (
     <>
-      <div className="page-header"><div><h2>Importar planilha</h2><p>Aceita a “Listagem de Alunos para Livro” e a planilha de acompanhamento (aba BASE)</p></div></div>
+      {!embutido && <div className="page-header"><div><h2>Importar planilha</h2><p>Aceita a “Listagem de Alunos para Livro” e a planilha de acompanhamento (aba BASE)</p></div></div>}
       {!pode("importar") ? <div className="aviso info">Seu perfil não permite importar.</div> : (
         <div className="dropzone" onClick={() => ref.current?.click()}>
           {carregando ? <Loader2 size={24} className="spin" /> : <Upload size={24} style={{ opacity: .6 }} />}

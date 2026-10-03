@@ -8,35 +8,22 @@ Os dados da versão anterior (turmas, frequências e contatos) continuam valendo
 
 ---
 
-## O que o sistema faz
+## Como o sistema funciona
 
-**Menu lateral**
-- Painel Geral · Agenda · Gestão de Permanência · Frequência/Chamadas · Contatos · Relatórios
-- Turmas organizadas por **Manhã / Tarde / Noite** e **Turmas Finalizadas** (com bolinha de cor = situação mais grave da turma)
-- Busca global por aluno, turma, código, docente, e-mail ou matrícula
-- Importar planilha · Usuários/Equipe · Configurações
+**Regra de aprovação:** no mínimo **75% de frequência** na carga horária total do curso (vale para qualquer carga horária).
+As faltas são contadas **em horas**:
+- **Faltou** o dia → perde todas as horas do dia (ex.: 4h).
+- Chegou atrasado ou saiu mais cedo → na chamada, clique nos **horários** em que o aluno não estava (cada horário = 1h).
+- Frequência = (carga horária − horas de falta) ÷ carga horária. Limite de faltas = 25% da carga horária (ex.: 160h → 40h).
+- O percentual é sempre arredondado **para baixo** (74,97% aparece como 74,9%, nunca como 75%).
 
-**Ao abrir uma turma**: Painel · Agenda do dia · Alunos · Chamada/Frequência · Gestão de permanência · Contatos · Relatórios · ⚙️ Configurações da turma
-(tipo FIC/Técnico, carga horária diária e total, docente, datas de início, previsão e encerramento real, finalizar, reabrir e excluir com confirmação).
+**Menu:** Início · Pendências · Alunos · Relatórios · Turmas (Manhã / Tarde / Noite / Finalizadas) · Configurações.
+**Dentro da turma:** Chamada · Alunos · Pendências · Resumo · ⚙️ Configurar (dados da turma, finalizar, excluir).
 
-**Prevenção (o coração do sistema)** — para cada aluno, calculado com a carga horária da turma:
-- frequência atual, faltas, atrasos, justificadas, faltas consecutivas
-- aulas/horas restantes e **quantas faltas ainda pode ter** sem cair abaixo de 75%
-- **presença necessária** nas aulas restantes
-- **projeção** ao final do curso mantendo o ritmo de faltas (usa o ritmo das últimas 10 aulas)
-- faixa: **Regular · Atenção · Risco · Crítico · Abaixo do mínimo** (limites configuráveis) + ação recomendada
+**Situação de frequência (3 cores):** OK · **Em risco** (já usou 60% das faltas permitidas, faltas seguidas ou ritmo de faltas alto) · **Abaixo de 75%**.
 
-**Automações** (ligar/desligar em Configurações)
-- 3 faltas consecutivas → alerta com data/hora, registro no histórico, pendência na Agenda, situação “Necessita contato”
-- e-mail automático para o e-mail cadastrado do aluno — **uma única vez por episódio** (não repete ao recarregar a tela);
-  uma nova sequência de faltas depois de uma presença gera um novo episódio
-- falha no envio ou aluno sem e-mail → pendência de contato manual
-- aluno entrou nas faixas Risco / Crítico / Abaixo → alerta preventivo (uma vez por faixa)
-- turma que costuma ter aula no dia e está sem chamada → aviso na Agenda
-
-**Perfis de acesso**: Administrador · Coordenação · Supervisão · Consulta.
-
----
+**Automático:** faltas seguidas (3 dias) ou entrada em risco → aluno vai para **Pendências** com “Necessita contato”;
+e-mail automático opcional (uma vez por sequência de faltas).
 
 ## Passo a passo para publicar esta versão
 

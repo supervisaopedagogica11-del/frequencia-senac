@@ -38,7 +38,7 @@ function seed(d) {
         let r = rnd();
         if (i === 7 && di >= dias.length - 3) reg[a.id] = { status: "F" }; // 3 faltas consecutivas recentes
         else if (i === 11 && di >= dias.length - 4) reg[a.id] = { status: "F" };
-        else if (r < taxa[i]) reg[a.id] = { status: r < taxa[i] * 0.2 ? "A" : r < taxa[i] * 0.3 ? "J" : "F" };
+        else if (r < taxa[i]) reg[a.id] = r < taxa[i] * 0.3 ? { status: "H", horas: r < taxa[i] * 0.15 ? [1] : [3, 4] } : { status: "F" };
       });
       if (t === "t3" && di % 2) return;
       d.frequencias[`${t}_${dt}`] = { turmaId: t, data: dt, registros: reg };

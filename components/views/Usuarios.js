@@ -27,22 +27,17 @@ function FormUsuario({ inicial, onClose }) {
   );
 }
 
-export default function Usuarios() {
+export default function Usuarios({ embutido }) {
   const { usuarios, usuario, pode, acoes } = useData();
   const [edit, setEdit] = useState(null);
   const admin = pode("usuarios");
   return (
     <>
-      <div className="page-header">
-        <div><h2>Usuários/Equipe</h2><p>Quem pode acessar o sistema e com qual perfil</p></div>
+      <div className={embutido ? "row" : "page-header"} style={embutido ? { justifyContent: "space-between", marginBottom: 12 } : undefined}>
+        {embutido ? <span className="small soft">Quem pode acessar o sistema e com qual perfil.</span> : <div><h2>Usuários/Equipe</h2><p>Quem pode acessar o sistema e com qual perfil</p></div>}
         {admin && <button className="btn btn-primary" onClick={() => setEdit("novo")}><UserPlus size={14} /> Cadastrar usuário</button>}
       </div>
       {!admin && <div className="aviso info" style={{ marginBottom: 14 }}><ShieldCheck size={14} /> Apenas administradores podem cadastrar ou alterar usuários.</div>}
-      <div className="cards">
-        {PERFIS.map((p) => (
-          <div key={p} className="card"><div style={{ fontWeight: 800, fontFamily: "var(--font-titulo)" }}>{p} <span className="soft">({usuarios.filter((u) => u.perfil === p).length})</span></div><div className="small soft" style={{ marginTop: 4 }}>{PERFIL_DESCRICAO[p]}</div></div>
-        ))}
-      </div>
       {!usuarios.length ? <Empty>Nenhum usuário.</Empty> : (
         <div className="tabela-wrap">
           <table className="tabela responsiva">
@@ -52,7 +47,7 @@ export default function Usuarios() {
                 <tr key={u.id}>
                   <td className="principal"><div><strong>{u.nome}</strong>{u.id === usuario?.email?.toLowerCase() && <span className="chip" style={{ background: "var(--primary)", marginLeft: 6 }}>você</span>}{u.cargo && <div className="small soft">{u.cargo}</div>}</div></td>
                   <td data-label="E-mail" className="small">{u.email}</td>
-                  <td data-label="Perfil">{u.perfil}</td>
+                  <td data-label="Perfil" title={PERFIL_DESCRICAO[u.perfil]}>{u.perfil}</td>
                   <td data-label="Status">{u.ativo !== false ? <span className="chip" style={{ background: "var(--verde)" }}>Ativo</span> : <span className="chip" style={{ background: "#9CA3AF" }}>Inativo</span>}</td>
                   <td data-label="Vínculo" className="small">{u.uid ? <span title={fmtDataHora(u.vinculadoEm)}><Link2 size={12} /> vinculado</span> : <span className="soft">aguardando primeiro acesso</span>}</td>
                   <td className="num">{admin && <div className="row" style={{ gap: 4, justifyContent: "flex-end" }}>

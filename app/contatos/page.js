@@ -1,3 +1,2 @@
-"use client";
-import Contatos from "@/components/views/Contatos";
-export default function Page() { return <Contatos />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/agenda"); }

@@ -42,7 +42,6 @@ export default function Shell({ children }) {
   }), []);
 
   const agenda = useMemo(() => montarAgenda({ turmas, linhas, alertas, contatos, freq, cfg, hoje }), [turmas, linhas, alertas, contatos, freq, cfg, hoje]);
-  const precisamContato = agenda.consecutivas.length + agenda.necessitaContato.length + agenda.limite.filter((x) => ["critico", "abaixo"].includes(x.linha.r.faixa)).length;
 
   // faixa mais grave por turma (indicador no menu)
   const piorPorTurma = useMemo(() => {
@@ -89,7 +88,7 @@ export default function Shell({ children }) {
         <span className="dot" style={{ background: fin ? "#9CA3AF" : FAIXA_COR[piorPorTurma[t.id]] || "#10B981" }} />
         <div className="grow">
           <div className="ellipsis">{t.curso}</div>
-          <div className="sub ellipsis">{t.codigo || "sem código"} · {nAtivos} alunos · {tipoLabel(t.tipo)}</div>
+          <div className="sub ellipsis">{t.codigo || "sem código"} · {nAtivos} alunos</div>
         </div>
         {fin ? <Flag size={12} color="#B9AEDD" /> : null}
         {pode("turmaConfig") && (
@@ -114,8 +113,7 @@ export default function Shell({ children }) {
   };
 
   const tituloTopo = turmaAtualId ? turmas.find((t) => t.id === turmaAtualId)?.curso : {
-    "/painel": "Painel Geral", "/agenda": "Agenda", "/permanencia": "Gestão de Permanência", "/frequencia": "Frequência", "/contatos": "Contatos",
-    "/relatorios": "Relatórios", "/usuarios": "Usuários/Equipe", "/configuracoes": "Configurações", "/importar": "Importar",
+    "/painel": "Início", "/agenda": "Pendências", "/alunos": "Alunos", "/relatorios": "Relatórios", "/configuracoes": "Configurações",
   }[pathname];
 
   return (
@@ -130,12 +128,12 @@ export default function Shell({ children }) {
 
         <aside className={"sidebar" + (menuAberto ? " aberta" : "")}>
           <div className="brand">
-            <div><h1>{cfg.instituicao || "Senac Três Corações"}</h1><p>Frequência · Permanência · Evasão</p></div>
+            <div><h1>{cfg.instituicao || "Senac Três Corações"}</h1><p>Controle de frequência</p></div>
             <button className="btn-icon" style={{ background: "none", border: "none", color: "#fff", display: menuAberto ? "flex" : "none", cursor: "pointer" }} onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X size={18} /></button>
           </div>
           <div className="side-search">
             <Search size={14} />
-            <input id="busca-global" placeholder="Buscar aluno, turma, código, docente, e-mail..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <input id="busca-global" placeholder="Buscar aluno ou turma..." value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
           <div className="side-scroll">
             {resultado ? (
@@ -159,11 +157,9 @@ export default function Shell({ children }) {
             ) : (
               <>
                 <nav className="nav">
-                  <NavLink href="/painel" icon={LayoutDashboard}>Painel Geral</NavLink>
-                  <NavLink href="/agenda" icon={CalendarClock} badge={agenda.total || null}>Agenda</NavLink>
-                  <NavLink href="/permanencia" icon={ShieldAlert}>Gestão de Permanência</NavLink>
-                  <NavLink href="/frequencia" icon={ClipboardList}>Frequência/Chamadas</NavLink>
-                  <NavLink href="/contatos" icon={Phone} badge={precisamContato || null}>Contatos</NavLink>
+                  <NavLink href="/painel" icon={LayoutDashboard}>Início</NavLink>
+                  <NavLink href="/agenda" icon={CalendarClock} badge={agenda.total || null}>Pendências</NavLink>
+                  <NavLink href="/alunos" icon={Users}>Alunos</NavLink>
                   <NavLink href="/relatorios" icon={FileBarChart}>Relatórios</NavLink>
                 </nav>
                 <div className="nav" style={{ paddingTop: 0 }}>
@@ -177,8 +173,6 @@ export default function Shell({ children }) {
                   {!turmas.length && <div className="small" style={{ color: "#B9AEDD", padding: "4px 10px" }}>Nenhuma turma ainda — importe a planilha ou crie uma turma.</div>}
                 </div>
                 <nav className="nav" style={{ borderTop: "1px solid rgba(255,255,255,0.14)", marginTop: 6 }}>
-                  {pode("importar") && <NavLink href="/importar" icon={FileSpreadsheet}>Importar planilha</NavLink>}
-                  <NavLink href="/usuarios" icon={Users}>Usuários/Equipe</NavLink>
                   <NavLink href="/configuracoes" icon={Settings}>Configurações</NavLink>
                 </nav>
               </>
@@ -196,11 +190,10 @@ export default function Shell({ children }) {
 
         <main className="main">{children}</main>
 
-        <nav className="bottom-nav">
-          <Link href="/painel" className={ativo("/painel") ? "active" : ""}><LayoutDashboard size={19} />Painel</Link>
-          <Link href="/agenda" className={ativo("/agenda") ? "active" : ""}><CalendarClock size={19} />Agenda{agenda.total ? <span className="badge">{agenda.total}</span> : null}</Link>
-          <Link href="/frequencia" className={ativo("/frequencia") ? "active" : ""}><ClipboardList size={19} />Frequência</Link>
-          <Link href="/contatos" className={ativo("/contatos") ? "active" : ""}><Phone size={19} />Contatos{precisamContato ? <span className="badge">{precisamContato}</span> : null}</Link>
+        <nav className="bottom-nav" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <Link href="/painel" className={ativo("/painel") ? "active" : ""}><LayoutDashboard size={19} />Início</Link>
+          <Link href="/agenda" className={ativo("/agenda") ? "active" : ""}><CalendarClock size={19} />Pendências{agenda.total ? <span className="badge">{agenda.total}</span> : null}</Link>
+          <Link href="/alunos" className={ativo("/alunos") ? "active" : ""}><Users size={19} />Alunos</Link>
           <button onClick={() => setMenuAberto(true)}><Menu size={19} />Turmas</button>
         </nav>
       </div>

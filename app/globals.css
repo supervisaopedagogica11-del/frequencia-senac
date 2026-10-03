@@ -246,3 +246,30 @@ table.tabela td.center, table.tabela th.center { text-align: center; }
 .tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
 .grid-rel { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 14px; align-items: start; }
 @media (max-width: 900px) { .grid-rel { grid-template-columns: 1fr; } }
+
+/* ---------- chamada por horas ---------- */
+.seg button.pres, .seg button.falt { width: auto; padding: 0 12px; height: 34px; font-size: 12px; }
+.seg button.pres.on { background: var(--verde); border-color: var(--verde); color: #fff; }
+.seg button.falt.on { background: var(--vermelho); border-color: var(--vermelho); color: #fff; }
+.horas { display: inline-flex; gap: 4px; }
+.horas button { border: 1.5px solid var(--line); background: #fff; border-radius: 7px; min-width: 36px; height: 34px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--ink-soft); }
+.horas button.on { background: #FEE2E2; border-color: var(--vermelho); color: var(--vermelho); }
+.horas button:disabled, .seg button:disabled { cursor: not-allowed; opacity: .6; }
+@media (max-width: 640px) {
+  table.chamada td[data-label="Horários"]::before { content: "Horários de falta"; }
+  .horas button { min-width: 40px; height: 38px; }
+}
+@media (max-width: 640px) {
+  table.tabela.chamada tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "nome faltas" "pres pres" "horas horas"; gap: 6px 10px; align-items: center; }
+  table.tabela.chamada td { padding: 0; }
+  table.tabela.chamada td::before { display: none !important; }
+  table.tabela.chamada td.principal { grid-area: nome; padding: 0; }
+  table.tabela.chamada td[data-label="Faltas no curso"] { grid-area: faltas; justify-content: flex-end; }
+  table.tabela.chamada td[data-label="Presença"] { grid-area: pres; }
+  table.tabela.chamada td[data-label="Horários"] { grid-area: horas; }
+  table.tabela.chamada td[data-label="Situação"] { display: none !important; }
+  table.tabela.chamada td[data-label="Presença"] .seg, table.tabela.chamada td[data-label="Horários"] .horas { width: 100%; }
+  table.tabela.chamada .seg button { flex: 1; }
+  table.tabela.chamada .horas button { flex: 1; }
+  table.tabela.chamada td[data-label="Horários"]::after { content: ""; }
+}
