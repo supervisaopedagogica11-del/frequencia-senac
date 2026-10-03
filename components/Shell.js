@@ -113,7 +113,7 @@ export default function Shell({ children }) {
   };
 
   const tituloTopo = turmaAtualId ? turmas.find((t) => t.id === turmaAtualId)?.curso : {
-    "/painel": "Início", "/agenda": "Pendências", "/alunos": "Alunos", "/relatorios": "Relatórios", "/configuracoes": "Configurações",
+    "/painel": "Painel Geral", "/agenda": "Pendências", "/alunos": "Alunos", "/relatorios": "Relatórios", "/configuracoes": "Configurações",
   }[pathname];
 
   return (
@@ -157,7 +157,7 @@ export default function Shell({ children }) {
             ) : (
               <>
                 <nav className="nav">
-                  <NavLink href="/painel" icon={LayoutDashboard}>Início</NavLink>
+                  <NavLink href="/painel" icon={LayoutDashboard}>Painel Geral</NavLink>
                   <NavLink href="/agenda" icon={CalendarClock} badge={agenda.total || null}>Pendências</NavLink>
                   <NavLink href="/alunos" icon={Users}>Alunos</NavLink>
                   <NavLink href="/relatorios" icon={FileBarChart}>Relatórios</NavLink>
@@ -191,7 +191,7 @@ export default function Shell({ children }) {
         <main className="main">{children}</main>
 
         <nav className="bottom-nav" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-          <Link href="/painel" className={ativo("/painel") ? "active" : ""}><LayoutDashboard size={19} />Início</Link>
+          <Link href="/painel" className={ativo("/painel") ? "active" : ""}><LayoutDashboard size={19} />Painel</Link>
           <Link href="/agenda" className={ativo("/agenda") ? "active" : ""}><CalendarClock size={19} />Pendências{agenda.total ? <span className="badge">{agenda.total}</span> : null}</Link>
           <Link href="/alunos" className={ativo("/alunos") ? "active" : ""}><Users size={19} />Alunos</Link>
           <button onClick={() => setMenuAberto(true)}><Menu size={19} />Turmas</button>
