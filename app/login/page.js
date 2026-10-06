@@ -3,18 +3,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { msgAuth } from "@/lib/acessos";
 import { useData } from "@/components/DataProvider";
 import { Loader2 } from "lucide-react";
 
-const ERROS = {
-  "auth/invalid-credential": "E-mail ou senha incorretos.",
-  "auth/wrong-password": "E-mail ou senha incorretos.",
-  "auth/user-not-found": "E-mail não encontrado. Se é seu primeiro acesso, use \"Primeiro acesso\".",
-  "auth/email-already-in-use": "Este e-mail já tem senha criada. Use \"Entrar\" ou \"Esqueci minha senha\".",
-  "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
-  "auth/invalid-email": "E-mail inválido.",
-  "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
-};
 
 export default function Login() {
   const { user, usuario, autorizado } = useData();
@@ -40,10 +32,13 @@ export default function Login() {
         setMsg({ tipo: "ok", texto: "Senha criada! Entrando..." });
       } else {
         await sendPasswordResetEmail(auth, email.trim());
-        setMsg({ tipo: "ok", texto: "Enviamos um link para redefinir sua senha. Confira sua caixa de entrada (e o spam)." });
+        setMsg({ tipo: "ok", texto: "Se este e-mail tiver login, enviamos um link para criar uma nova senha. Confira a caixa de entrada e o spam/lixo eletrônico." });
       }
     } catch (err) {
-      setMsg({ tipo: "erro", texto: ERROS[err.code] || err.message || "Não foi possível concluir." });
+      let texto = err.code ? msgAuth(err) : err.message || "Não foi possível concluir.";
+      if (modo === "entrar" && ["auth/invalid-credential", "auth/user-not-found", "auth/wrong-password"].includes(err.code)) texto += " Se ainda não criou sua senha, use “Primeiro acesso”. Se esqueceu, use “Esqueci a senha” ou peça ao administrador.";
+      if (modo === "primeiro" && err.code === "auth/email-already-in-use") texto += " Use “Entrar” com a senha que você já tem, ou “Esqueci a senha”.";
+      setMsg({ tipo: "erro", texto });
     } finally { setCarregando(false); }
   }
 
