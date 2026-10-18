@@ -28,6 +28,7 @@ export default function DataProvider({ children }) {
   const [alertas, setAlertas] = useState({});
   const [emails, setEmails] = useState([]);
   const [historico, setHistorico] = useState([]);
+  const [relatorios, setRelatorios] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cfgRaw, setCfgRaw] = useState(null);
   const [carregado, setCarregado] = useState({});
@@ -88,6 +89,7 @@ export default function DataProvider({ children }) {
     subs.push(onSnapshot(collection(db, "alertas"), (s) => { const m = {}; s.docs.forEach((d) => { m[d.id] = { id: d.id, ...d.data() }; }); setAlertas(m); marca("alertas"); }, erro("alertas")));
     subs.push(onSnapshot(query(collection(db, "emails"), orderBy("enviadoEm", "desc"), limit(1000)), (s) => setEmails(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("emails")));
     subs.push(onSnapshot(query(collection(db, "historico"), orderBy("em", "desc"), limit(1500)), (s) => setHistorico(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("historico")));
+    subs.push(onSnapshot(query(collection(db, "relatorios"), orderBy("geradoEm", "desc"), limit(200)), (s) => setRelatorios(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("relatorios")));
     subs.push(onSnapshot(collection(db, "usuarios"), (s) => setUsuarios(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))), erro("usuarios")));
     subs.push(onSnapshot(doc(db, "config", "geral"), (s) => { setCfgRaw(s.exists() ? s.data() : null); marca("cfg"); }, erro("cfg")));
     statusEnvio().then(setEnvio);
@@ -397,6 +399,30 @@ export default function DataProvider({ children }) {
       await log({ tipo: "config", descricao: descricao || "Configurações do sistema alteradas" });
       toast("Configurações salvas.");
     }),
+    // ---------- evasão ----------
+    // texto livre "Motivo da evasão" (só acrescenta este campo; não mexe nas outras observações)
+    salvarMotivoEvasao: seguro(async (turma, aluno, texto) => {
+      if (!exigir("contatos")) return;
+      const k = `${turma.id}|${aluno.id}`;
+      const atual = contatosRef.current[k] || { tentativas: [] };
+      if ((atual.motivoEvasao || "") === (texto || "")) return;
+      contatosRef.current = { ...contatosRef.current, [k]: { ...atual, motivoEvasao: texto } };
+      await DB.definirCamposContato(turma.id, aluno.id, { motivoEvasao: texto || null });
+      await log({ tipo: "contato", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso, descricao: `Motivo da evasão: ${texto || "(apagado)"}` });
+    }),
+    // categoria escolhida manualmente (null = volta para a classificação automática)
+    classificarEvasaoManual: seguro(async (turma, aluno, categoria, rotulo) => {
+      if (!exigir("contatos")) return;
+      const k = `${turma.id}|${aluno.id}`;
+      const manual = categoria ? { categoria, por: usuario?.nome || quem, porEmail: quem, em: DB.agoraISO() } : null;
+      const atual = contatosRef.current[k] || { tentativas: [] };
+      contatosRef.current = { ...contatosRef.current, [k]: { ...atual, evasaoManual: manual || undefined } };
+      await DB.definirCamposContato(turma.id, aluno.id, { evasaoManual: manual });
+      await log({ tipo: "contato", turmaId: turma.id, alunoId: aluno.id, alunoNome: aluno.nome, turmaNome: turma.curso, descricao: categoria ? `Motivo da evasão classificado manualmente: ${rotulo || categoria}` : "Motivo da evasão voltou para a classificação automática" });
+      toast(categoria ? `Categoria definida: ${rotulo || categoria}.` : "Voltou para a classificação automática.");
+    }),
+    registrarRelatorio: (dados) => DB.registrarRelatorio({ ...dados, geradoPor: usuario?.nome || quem, geradoPorEmail: quem }),
+
     salvarUsuario: seguro(async (u, novo) => {
       if (!exigir("usuarios")) return;
       await DB.salvarUsuario({ ...u, ...(novo ? { criadoEm: DB.agoraISO(), criadoPor: quem } : {}) });
@@ -416,7 +442,7 @@ export default function DataProvider({ children }) {
 
   const value = {
     user, usuario, autorizado, pronto, perfil, pode, cfg, cfgRaw, envio, setEnvio,
-    turmas, freq, contatos, alertas, emails, historico, usuarios, linhas, hoje,
+    turmas, freq, contatos, alertas, emails, historico, relatorios, usuarios, linhas, hoje,
     toast, confirmar, acoes,
   };
 

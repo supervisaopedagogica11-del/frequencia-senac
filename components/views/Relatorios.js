@@ -1,5 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import RelatorioQuinzenal, { TITULO_QUINZENAL } from "./RelatorioQuinzenal";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { useData } from "../DataProvider";
 import { Empty } from "../ui";
@@ -38,10 +40,11 @@ function definicoes({ linhas, turmas, contatos, emails, cfg, freq }, filtro) {
 export default function Relatorios() {
   const data = useData();
   const { turmas, cfg } = data;
-  const [sel, setSel] = useState("turma");
+  const sp = useSearchParams();
+  const [sel, setSel] = useState(sp?.get("tipo") === "quinzenal" ? "quinzenal" : "turma");
   const [turma, setTurma] = useState("");
   const defs = useMemo(() => definicoes(data, { turma }), [data, turma]);
-  const def = defs.find((d) => d.id === sel);
+  const def = defs.find((d) => d.id === sel) || defs[0];
   const linhas = useMemo(() => def.linhas(), [def]);
   const t = turmas.find((x) => x.id === turma);
   const nome = `${def.titulo} ${t?.codigo || ""}`;
@@ -49,8 +52,10 @@ export default function Relatorios() {
     <>
       <div className="page-header"><div><h2>Relatórios</h2><p>Escolha o relatório e baixe em PDF ou Excel</p></div></div>
       <div className="pills" style={{ marginBottom: 12 }}>
+        <button className={"pill" + (sel === "quinzenal" ? " on" : "")} onClick={() => setSel("quinzenal")}>Quinzenal — alunos com mais faltas</button>
         {defs.map((d) => <button key={d.id} className={"pill" + (sel === d.id ? " on" : "")} onClick={() => setSel(d.id)}>{d.titulo}</button>)}
       </div>
+      {sel === "quinzenal" ? <RelatorioQuinzenal /> : <>
       <div className="card" style={{ marginBottom: 12 }}>
         <p className="small soft" style={{ margin: "0 0 10px" }}>{def.desc} O relatório individual do aluno fica na ficha dele (botão PDF).</p>
         <div className="row">
@@ -73,6 +78,7 @@ export default function Relatorios() {
           {linhas.length > 100 && <div className="small soft" style={{ padding: 10 }}>Prévia das primeiras 100 linhas — o arquivo baixado tem todas as {linhas.length}.</div>}
         </div>
       )}
+      </>}
     </>
   );
 }

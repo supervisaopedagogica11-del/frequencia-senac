@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, CalendarClock, ShieldAlert, ClipboardList, Phone, FileSpreadsheet, FileBarChart, Settings, Plus, LogOut, Menu, X,
+  LayoutDashboard, CalendarClock, ShieldAlert, PieChart, ClipboardList, Phone, FileSpreadsheet, FileBarChart, Settings, Plus, LogOut, Menu, X,
 } from "lucide-react";
 import { useData } from "./DataProvider";
 import { isFinalizada, normalizar } from "@/lib/engine";
@@ -125,6 +125,7 @@ export default function Shell({ children }) {
               <NavLink href="/painel" icon={LayoutDashboard}>Painel</NavLink>
               <NavLink href="/agenda" icon={CalendarClock} badge={agenda.total || null}>Agenda do dia</NavLink>
               <NavLink href="/permanencia" icon={ShieldAlert}>Gestão de Permanência</NavLink>
+              <NavLink href="/evasao" icon={PieChart}>Evasão escolar</NavLink>
               <NavLink href="/chamada" icon={ClipboardList}>Chamada</NavLink>
               <NavLink href="/contatos" icon={Phone} badge={agenda.paraContato.length || null}>Contato com alunos</NavLink>
               {pode("importar") && <NavLink href="/importar" icon={FileSpreadsheet}>Importar</NavLink>}

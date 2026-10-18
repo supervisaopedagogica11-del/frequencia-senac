@@ -47,4 +47,20 @@ function seed(d) {
   d.usuarios = {};
   d.config = {};
   d.contatos = {}; d.alertas = {}; d.emails = {}; d.historico = {};
+  // alunos evadidos FICTÍCIOS (apenas para testar o dashboard de evasão no banco de testes)
+  const evadir = (t, i, quando, contato) => {
+    const a = d.turmas[t].alunos[i];
+    a.situacao = "Evadiu"; a.statusAcomp = null; a.statusEm = quando + "T12:00:00.000Z";
+    if (contato) d.contatos[`${t}_${a.id}`] = { turmaId: t, alunoId: a.id, tentativas: [], ...contato };
+  };
+  const ha = (n) => { const dt = new Date(); dt.setDate(dt.getDate() - n); return iso(dt); };
+  evadir("t1", 2, ha(5), { motivoEvasao: "Conseguiu emprego no horário das aulas" });
+  evadir("t1", 4, ha(20), { justificativa: "Teve um problema de saúde e vai fazer cirurgia" });
+  evadir("t1", 6, ha(40), { observacoes: "Família mudou de cidade" });
+  evadir("t2", 3, ha(8), { motivoFalta: "Motivos pessoais" });
+  evadir("t2", 10, ha(12), { motivoEvasao: "Arrumou emprego e também está com problema de saúde" });
+  evadir("t3", 5, ha(3));
+  evadir("t3", 8, ha(70), { observacoes: "Não entregou o trabalho de conclusão" });
+  d.turmas.t1.alunos[9].situacao = "Ativo"; // ativo com texto "trabalho" não entra
+  d.contatos[`t1_${d.turmas.t1.alunos[9].id}`] = { turmaId: "t1", alunoId: d.turmas.t1.alunos[9].id, tentativas: [], observacoes: "Reclamou do trabalho" };
 }

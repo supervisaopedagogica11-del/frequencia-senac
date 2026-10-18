@@ -6,6 +6,7 @@ import {
 import { useData } from "./DataProvider";
 import { useUI } from "./Shell";
 import { Modal, FaixaChip, StatusChip, FaltasBar } from "./ui";
+import { ClassificacaoEvasao } from "./ClassificacaoEvasao";
 import { TIPOS_TURMA, TURNOS, TIER_COR, RISCO_LABEL, RISCO_COR, SITUACOES_ALUNO } from "@/lib/constants";
 import {
   fmtData, fmtDataHora, isFinalizada, waLink, mailtoLink, emailValido, renderTemplate, variaveisEmail, fmtPct, fmtHoras, textoWhats, situacaoAluno,
@@ -39,6 +40,12 @@ export function FichaAluno({ turmaId, alunoId }) {
       subtitulo={`${turma.curso} · ${turma.codigo || "sem código"} · ${aluno.telefone || "sem telefone"} · ${aluno.email || "sem e-mail"}`}>
       {situacao !== "Ativo" && (
         <div className="aviso info" style={{ marginBottom: 14 }}>Este aluno está marcado como <strong>&nbsp;{situacao}&nbsp;</strong> — por isso não aparece mais na Agenda, no Painel de atenção nem na Gestão de Permanência.</div>
+      )}
+      {situacao === "Evadiu" && (
+        <div style={{ marginBottom: 14 }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 6 }}>Motivo da evasão</div>
+          <ClassificacaoEvasao turma={turma} aluno={aluno} />
+        </div>
       )}
       <div className="ficha-acoes">
         <label className="small" style={{ display: "flex", alignItems: "center", gap: 6 }}>Situação do aluno:

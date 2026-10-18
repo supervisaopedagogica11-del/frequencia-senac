@@ -7,11 +7,53 @@ import { Switch } from "../ui";
 import Usuarios from "./Usuarios";
 import Importar from "./Importar";
 import { VARIAVEIS_EMAIL } from "@/lib/constants";
+import { CATEGORIAS_EVASAO, CATEGORIA_LABEL, CATEGORIA_COR, mesclarPalavras, classificarTexto } from "@/lib/evasao";
 import { mergeConfig, renderTemplate, variaveisEmail, emailValido } from "@/lib/engine";
 import { auth } from "@/lib/firebase";
 import { statusEnvio } from "@/lib/email";
 
-const ABAS = [["geral", "Alertas"], ["email", "E-mail automático"], ["equipe", "Usuários/Equipe"], ["importar", "Importar planilha"]];
+const ABAS = [["geral", "Alertas"], ["email", "E-mail automático"], ["evasao", "Motivos de evasão"], ["equipe", "Usuários/Equipe"], ["importar", "Importar planilha"]];
+
+// editor das palavras-chave usadas na classificação automática dos motivos de evasão
+function PalavrasEvasao({ f, setF, admin }) {
+  const p = mesclarPalavras(f.evasaoPalavras);
+  // texto exibido = lista crua (permite digitar linhas novas); a lista limpa só vale para o teste e para gravar
+  const cru = (k) => (Array.isArray(f.evasaoPalavras?.[k]) ? f.evasaoPalavras[k] : p[k]).join("\n");
+  const [teste, setTeste] = useState("");
+  const setLista = (k, txt) => setF((x) => {
+    const base = mesclarPalavras(x.evasaoPalavras);
+    const atual = { ...base, ...(x.evasaoPalavras || {}) };
+    return { ...x, evasaoPalavras: { ...atual, [k]: txt.split("\n") } };
+  });
+  const r = teste.trim() ? classificarTexto(teste, p) : null;
+  return (
+    <div className="card">
+      <div className="aviso info" style={{ marginBottom: 12 }}>Uma palavra ou expressão por linha. Maiúsculas, acentos e plural simples (s/es) não importam, e só palavras inteiras contam. Quando o texto citar mais de um motivo, vale a categoria com mais termos; no empate, a ordem abaixo.</div>
+      <div className="grid2">
+        {CATEGORIAS_EVASAO.filter((c) => c.id !== "outros").map((c) => (
+          <label key={c.id} className="campo"><span><i className="cat-dot" style={{ background: CATEGORIA_COR[c.id] }} /> {c.label}</span>
+            <textarea className="input" style={{ minHeight: 150, fontSize: 12.5 }} disabled={!admin} value={cru(c.id)} onChange={(e) => setLista(c.id, e.target.value)} />
+          </label>
+        ))}
+      </div>
+      <label className="campo" style={{ marginTop: 12 }}><span>Expressões a ignorar (contêm uma palavra-chave mas não são motivo de evasão)</span>
+        <textarea className="input" style={{ minHeight: 90, fontSize: 12.5 }} disabled={!admin} value={cru("ignorar")} onChange={(e) => setLista("ignorar", e.target.value)} />
+      </label>
+      <p className="small soft">“Outros” recebe os evadidos sem registro ou sem nenhuma palavra-chave reconhecida.</p>
+      <div className="card" style={{ background: "#F7F8FC", marginTop: 8 }}>
+        <label className="campo"><span>Testar um texto</span><input className="input" value={teste} placeholder="Ex.: conseguiu um emprego e não consegue vir à noite" onChange={(e) => setTeste(e.target.value)} /></label>
+        {r && <div className="small" style={{ marginTop: 8 }}>Resultado: <strong>{CATEGORIA_LABEL[r.categoria]}</strong>{r.termos.length ? ` · termos: ${r.termos.join(", ")}` : " · nenhuma palavra-chave"}{r.revisar ? ` · também citou ${r.candidatas.filter((c) => c !== r.categoria).map((c) => CATEGORIA_LABEL[c]).join(", ")}` : ""}</div>}
+      </div>
+      {admin && <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => setF((x) => { const { evasaoPalavras, ...rest } = x; return rest; })}>Restaurar lista padrão</button>}
+    </div>
+  );
+}
+
+// tira linhas vazias e repetidas antes de gravar
+function limparPalavras(c) {
+  if (!c.evasaoPalavras) return c;
+  return { ...c, evasaoPalavras: mesclarPalavras(c.evasaoPalavras) };
+}
 
 function Linha({ titulo, desc, children }) {
   return (
@@ -54,15 +96,15 @@ export default function Configuracoes() {
     setTestando(false);
     statusEnvio().then(setEnvio);
   }
-  const salvar = admin && (aba === "geral" || aba === "email") && (
-    <button className="btn btn-primary" disabled={!mudou} onClick={() => acoes.salvarConfig(mergeConfig(f))}><Save size={14} /> Salvar</button>
+  const salvar = admin && (aba === "geral" || aba === "email" || aba === "evasao") && (
+    <button className="btn btn-primary" disabled={!mudou} onClick={() => acoes.salvarConfig(limparPalavras(mergeConfig(f)))}><Save size={14} /> Salvar</button>
   );
 
   return (
     <>
       <div className="page-header"><div><h2>Configurações</h2></div>{salvar}</div>
       <div className="tabs">{ABAS.map(([k, l]) => <button key={k} className={aba === k ? "active" : ""} onClick={() => setAba(k)}>{l}</button>)}</div>
-      {!admin && (aba === "geral" || aba === "email") && <div className="aviso info" style={{ marginBottom: 12 }}>Somente administradores podem alterar estas configurações.</div>}
+      {!admin && (aba === "geral" || aba === "email" || aba === "evasao") && <div className="aviso info" style={{ marginBottom: 12 }}>Somente administradores podem alterar estas configurações.</div>}
 
       {aba === "geral" && (
         <div className="card">
@@ -110,6 +152,7 @@ export default function Configuracoes() {
         </div>
       )}
 
+      {aba === "evasao" && <PalavrasEvasao f={f} setF={setF} admin={admin} />}
       {aba === "equipe" && <Usuarios embutido />}
       {aba === "importar" && <Importar embutido />}
     </>

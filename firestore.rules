@@ -46,5 +46,7 @@ service cloud.firestore {
     match /alertas/{id}     { allow read: if cadastrado(); allow write: if edita(); }
     match /emails/{id}      { allow read: if cadastrado(); allow create: if edita(); }
     match /historico/{id}   { allow read: if cadastrado(); allow create: if cadastrado(); }
+    // histórico de relatórios gerados (só registra; não altera nem apaga)
+    match /relatorios/{id}  { allow read: if cadastrado(); allow create: if cadastrado(); }
   }
 }

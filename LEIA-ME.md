@@ -27,6 +27,29 @@ e a lista de turmas por tipo (Técnicos / FIC). Ao clicar numa turma abre a Cham
 **Automático:** faltas seguidas (3 dias) ou entrada em risco → aluno vai para **Pendências** com “Necessita contato”;
 e-mail automático opcional (uma vez por sequência de faltas).
 
+## Novidades da versão 2.1
+
+**Evasão escolar (menu “Evasão escolar”)** — quantidade de evadidos, taxa de evasão (evadidos ÷ alunos matriculados nas
+turmas do filtro), gráfico e tabela por motivo (Trabalho, Saúde, Mudança de cidade, Motivos pessoais, Outros) e a lista de alunos
+de cada categoria. Filtros de período (pela data em que o aluno foi marcado como “Evadiu”), turma, tipo, turno e turmas ativas/finalizadas.
+- Entram só alunos com situação **Evadiu**. Cada pessoa conta uma vez (mesma matrícula em duas turmas = 1 aluno).
+- O motivo é lido, nesta ordem: campo **Motivo da evasão** (novo, na ficha do aluno evadido) → justificativa / motivo da ausência / observações → registros das tentativas de contato. Sem palavra-chave = **Outros**.
+- Maiúsculas, acentos e plural simples não importam; só palavras inteiras contam; expressões como “trabalho de conclusão” são ignoradas; “não foi por…” não conta.
+- Texto com mais de um motivo: vale a categoria com mais termos (empate: Trabalho > Saúde > Mudança > Pessoais) e o aluno aparece com o selo **Revisar**.
+- Qualquer pessoa com permissão de contatos pode escolher a categoria à mão; a escolha manual prevalece até voltar para “Automática”.
+- Nada é gravado sobre os registros originais: a classificação é calculada na hora e muda sozinha quando um texto é editado.
+- Palavras-chave: **Configurações → Motivos de evasão** (só administradores), com campo para testar um texto.
+
+**Relatório quinzenal (Relatórios → “Quinzenal — alunos com mais faltas”)** — período padrão dos últimos 15 dias (setas para a
+quinzena anterior/seguinte), filtros de turma, tipo de curso, turno e situação, e opção de listar os 10/20/50 com mais faltas ou todos.
+Unidade: **horas de falta** (mesma regra dos 75%); só contam aulas com chamada registrada no período. Prévia na tela e exportação em
+PDF (“Relatório Quinzenal de Frequência Escolar”), Excel e CSV com as mesmas colunas. Cada geração fica no histórico
+(período, filtros, formato, quem gerou), com botão para abrir de novo com os mesmos filtros.
+
+**Banco de dados:** nenhuma migração. Novos campos opcionais em `contatos` (`motivoEvasao`, `evasaoManual`), nova lista opcional
+`evasaoPalavras` em `config/geral` e nova coleção `relatorios`. **Republique o arquivo `firestore.rules`** (Firebase → Firestore → Regras)
+para liberar a coleção `relatorios`.
+
 ## Passo a passo para publicar esta versão
 
 ### 1. Enviar o código (GitHub Desktop)
