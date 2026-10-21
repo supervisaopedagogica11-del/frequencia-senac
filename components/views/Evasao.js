@@ -113,7 +113,13 @@ export default function Evasao() {
       </div>
       {dados.semData > 0 && <div className="aviso info" style={{ marginBottom: 14 }}><Info size={14} /> {dados.semData} aluno(s) evadido(s) não têm a data da evasão registrada e por isso não entram quando há filtro de período (aparecem em “Todo o período”).</div>}
 
-      {!dados.total ? <Empty>Nenhum aluno com situação “Evadiu” {f.periodo === "tudo" ? "nos filtros escolhidos" : "neste período"}.</Empty> : (
+      {!dados.total && (
+        <div className="aviso info" style={{ marginBottom: 14 }}>
+          <Info size={14} />
+          <span>Ainda não há alunos com situação <strong>“Evadiu”</strong> {f.periodo === "tudo" ? "nos filtros escolhidos" : "neste período"} — por isso o gráfico está zerado. Para um aluno entrar aqui, abra a ficha dele e mude a <strong>Situação do aluno</strong> para “Evadiu” (ou use “Marcar como Evadido” em Contato com alunos). Depois escreva o <strong>Motivo da evasão</strong> na ficha.</span>
+        </div>
+      )}
+      {(
         <>
           <div className="grid2" style={{ marginBottom: 16, alignItems: "start" }}>
             <GraficoMotivos dados={dados} sel={sel} onSel={(v) => { setSel(v); setSoRevisar(false); }} />

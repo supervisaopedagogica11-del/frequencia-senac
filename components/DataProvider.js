@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, doc, onSnapshot, orderBy, query, limit } from "firebase/firestore";
+import { collection, doc, onSnapshot, orderBy, query, limit, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import * as DB from "@/lib/db";
 import { consolidar, mergeConfig, todayISO, statusAluno, isFinalizada, fmtData } from "@/lib/engine";
@@ -11,6 +11,7 @@ import { statusEnvio, enviarERegistrar } from "@/lib/email";
 import { novoId, mesclarImportacao } from "@/lib/importar";
 
 const Ctx = createContext(null);
+const MSG_COTA = "O limite diário gratuito do banco de dados (Firebase) foi atingido. As alterações voltam a funcionar quando o limite renovar (por volta das 4h da manhã) ou depois de ativar o plano pago do Firebase.";
 export const useData = () => useContext(Ctx);
 
 function chaveDeContato(d) {
@@ -74,7 +75,7 @@ export default function DataProvider({ children }) {
     if (!autorizado) return;
     const marca = (k) => setCarregado((c) => (c[k] ? c : { ...c, [k]: true }));
     const subs = [];
-    const erro = (k) => (e) => { console.error(k, e); marca(k); };
+    const erro = (k) => (e) => { console.error(k, e); marca(k); if (e?.code === "resource-exhausted") toast(MSG_COTA, "erro"); };
     subs.push(onSnapshot(collection(db, "turmas"), (s) => { setTurmas(s.docs.map((d) => ({ id: d.id, ...d.data(), alunos: d.data().alunos || [] })).sort((a, b) => (a.curso || "").localeCompare(b.curso || ""))); marca("turmas"); }, erro("turmas")));
     subs.push(onSnapshot(collection(db, "frequencias"), (s) => {
       const m = {};
@@ -87,9 +88,10 @@ export default function DataProvider({ children }) {
       setContatos(m); marca("contatos");
     }, erro("contatos")));
     subs.push(onSnapshot(collection(db, "alertas"), (s) => { const m = {}; s.docs.forEach((d) => { m[d.id] = { id: d.id, ...d.data() }; }); setAlertas(m); marca("alertas"); }, erro("alertas")));
-    subs.push(onSnapshot(query(collection(db, "emails"), orderBy("enviadoEm", "desc"), limit(1000)), (s) => setEmails(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("emails")));
-    subs.push(onSnapshot(query(collection(db, "historico"), orderBy("em", "desc"), limit(1500)), (s) => setHistorico(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("historico")));
-    subs.push(onSnapshot(query(collection(db, "relatorios"), orderBy("geradoEm", "desc"), limit(200)), (s) => setRelatorios(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("relatorios")));
+    subs.push(onSnapshot(query(collection(db, "emails"), orderBy("enviadoEm", "desc"), limit(300)), (s) => setEmails(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("emails")));
+    // do histórico só é preciso, aqui, o registro das mudanças de situação (data da evasão); o resto não é baixado
+    subs.push(onSnapshot(query(collection(db, "historico"), where("tipo", "==", "status")), (s) => setHistorico(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("historico")));
+    subs.push(onSnapshot(query(collection(db, "relatorios"), orderBy("geradoEm", "desc"), limit(100)), (s) => setRelatorios(s.docs.map((d) => ({ id: d.id, ...d.data() }))), erro("relatorios")));
     subs.push(onSnapshot(collection(db, "usuarios"), (s) => setUsuarios(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))), erro("usuarios")));
     subs.push(onSnapshot(doc(db, "config", "geral"), (s) => { setCfgRaw(s.exists() ? s.data() : null); marca("cfg"); }, erro("cfg")));
     statusEnvio().then(setEnvio);
@@ -144,7 +146,7 @@ export default function DataProvider({ children }) {
   const log = (ev) => DB.registrarHistorico({ usuario: quem, ...ev });
   const exigir = (acao) => { if (!pode(acao)) { toast("Seu perfil não tem permissão para esta ação.", "erro"); return false; } return true; };
   const seguro = (fn, msgErro = "Não foi possível salvar") => async (...args) => {
-    try { return await fn(...args); } catch (e) { console.error(e); toast(`${msgErro}: ${e.message || e}`, "erro"); return null; }
+    try { return await fn(...args); } catch (e) { console.error(e); toast(e?.code === "resource-exhausted" ? MSG_COTA : `${msgErro}: ${e.message || e}`, "erro"); return null; }
   };
 
   const acoes = {

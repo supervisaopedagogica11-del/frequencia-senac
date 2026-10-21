@@ -1,6 +1,9 @@
 import { getStore, save, subscribe, uid } from "./store";
 const clone = (x) => JSON.parse(JSON.stringify(x ?? null));
 export const getFirestore = () => ({});
+export const initializeFirestore = () => ({});
+export const persistentLocalCache = () => ({});
+export const persistentMultipleTabManager = () => ({});
 export const doc = (_db, col, id) => ({ type: "doc", col, id });
 export const collection = (_db, col) => ({ type: "col", col, filtros: [], ordem: null, lim: null });
 export const where = (campo, op, valor) => ({ w: [campo, op, valor] });
