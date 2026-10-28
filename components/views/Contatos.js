@@ -167,7 +167,7 @@ export default function Contatos() {
       {!historico && !emails && (
         <div className="aviso" style={{ marginTop: 6 }}>
           <AlertTriangle size={14} />
-          <span>Os botões abrem a ligação, o e-mail e o WhatsApp no seu aparelho. O <strong>e-mail automático</strong> (após {cfg.consecutivasAlerta} faltas seguidas) e o botão “Enviar pelo sistema” usam o e-mail cadastrado do aluno — configure em Configurações → E-mail automático.</span>
+          <span>Os botões abrem a ligação, o e-mail e o WhatsApp no seu aparelho. O <strong>e-mail automático</strong> (após {cfg.consecutivasAlerta} faltas seguidas; 2 nas turmas de Aprendizagem Comercial) e o botão “Enviar pelo sistema” usam o e-mail cadastrado do aluno — configure em Configurações → E-mail automático.</span>
         </div>
       )}
     </>

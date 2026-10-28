@@ -239,7 +239,12 @@ export default function DataProvider({ children }) {
       if (existe) {
         ["nome", "email", "telefone", "matricula"].forEach((k) => { if ((existe[k] || "") !== (novo[k] || "")) det.push(`${k === "email" ? "e-mail" : k}: ${existe[k] || "—"} → ${novo[k] || "—"}`); });
       }
-      await log({ tipo: "aluno", turmaId: turma.id, alunoId: novo.id, alunoNome: novo.nome, turmaNome: turma.curso, descricao: existe ? `Cadastro atualizado — ${det.join("; ") || "sem alterações"}` : "Aluno incluído na turma" });
+      if (JSON.stringify(existe?.aproveitamento || null) !== JSON.stringify(novo.aproveitamento || null) && (existe?.aproveitamento || novo.aproveitamento)) {
+        const ap = novo.aproveitamento;
+        det.push(!ap?.ativo ? "aproveitamento de estudos: desmarcado"
+          : `aproveitamento de estudos: ${ap.cargaHoraria}h — ${(ap.periodos || []).map((p) => `${p.uc || "UC"} ${fmtData(p.inicio)} a ${p.fim ? fmtData(p.fim) : "…"}`).join("; ") || "sem UCs"}`);
+      }
+      await log({ tipo: "aluno", turmaId: turma.id, alunoId: novo.id, alunoNome: novo.nome, turmaNome: turma.curso, descricao: existe ? `Cadastro atualizado — ${det.join("; ") || "sem alterações"}` : `Aluno incluído na turma${det.length ? ` — ${det.join("; ")}` : ""}` });
       toast(existe ? "Cadastro do aluno atualizado." : "Aluno incluído.");
       return novo;
     }),

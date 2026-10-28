@@ -109,7 +109,7 @@ export default function Configuracoes() {
       {aba === "geral" && (
         <div className="card">
           <div className="aviso info" style={{ marginBottom: 6 }}>Regra de aprovação: mínimo de <strong>&nbsp;75% de frequência&nbsp;</strong> na carga horária total do curso. As faltas são contadas em horas.</div>
-                    <Linha titulo="Quantas faltas seguidas geram alerta" desc="Dias de falta inteira, em sequência.">
+                    <Linha titulo="Quantas faltas seguidas geram alerta" desc="Dias de falta inteira, em sequência. Turmas de Aprendizagem Comercial (aulas 2x por semana) usam 2 automaticamente.">
             <span className="row" style={{ flexWrap: "nowrap" }}><input type="number" className="input" style={{ width: 70 }} min={2} max={10} disabled={!admin} value={f.consecutivasAlerta} onChange={(e) => set("consecutivasAlerta", Number(e.target.value) || 3)} /> dias</span>
           </Linha>
           <Linha titulo="Alerta de faltas seguidas" desc="O aluno entra em Contato com alunos e na Agenda do dia, com registro no histórico.">

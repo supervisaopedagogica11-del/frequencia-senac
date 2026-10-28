@@ -34,7 +34,7 @@ export default function Alunos({ turmaId }) {
         case "atencao": return l.ativo && ["risco", "abaixo"].includes(l.r.faixa);
         case "risco": return l.ativo && l.r.faixa === "risco";
         case "abaixo": return l.ativo && l.r.faixa === "abaixo";
-        case "seguidas": return l.ativo && l.r.consecutivas >= cfg.consecutivasAlerta;
+        case "seguidas": return l.ativo && l.r.consecutivas >= (l.r.nAlerta || cfg.consecutivasAlerta);
         case "contato": return l.status === "Necessita contato";
         case "evadidos": return l.status === "Evadido";
         case "semEmail": return l.ativo && !l.aluno.email;
@@ -43,7 +43,7 @@ export default function Alunos({ turmaId }) {
         case "f8090": return l.ativo && l.r.pct !== null && l.r.pct >= 80 && l.r.pct < 90;
         case "f90": return l.ativo && l.r.pct !== null && l.r.pct >= 90;
         case "acomp": return l.ativo && ["Necessita contato", "Em acompanhamento", "Aguardando retorno"].includes(l.status);
-        case "evasao": return l.ativo && (l.r.faixa === "abaixo" || l.r.consecutivas >= cfg.consecutivasAlerta);
+        case "evasao": return l.ativo && (l.r.faixa === "abaixo" || l.r.consecutivas >= (l.r.nAlerta || cfg.consecutivasAlerta));
         default: return l.ativo;
       }
     }).sort((a, b) => (f === "todos" ? a.aluno.nome.localeCompare(b.aluno.nome) : b.prioridade - a.prioridade));

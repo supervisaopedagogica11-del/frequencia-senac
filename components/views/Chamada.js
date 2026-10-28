@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Trash2, UserPlus, Settings, Fi
 import { useData } from "../DataProvider";
 import { useUI } from "../Shell";
 import { Empty } from "../ui";
-import { addDias, fmtData, fmtDataCurta, datasRegistradas, isFinalizada, fmtHoras, todayISO } from "@/lib/engine";
+import { addDias, fmtData, fmtDataCurta, datasRegistradas, isFinalizada, fmtHoras, todayISO, isAproveitamento, dentroDeUC, limiteSeguidas, isAprendizagemComercial } from "@/lib/engine";
 import { TIER_GRAD, TIPOS_TURMA, TURNOS } from "@/lib/constants";
 import { exportarPDFTurma } from "./Painel";
 
@@ -135,7 +135,7 @@ export default function Chamada({ turmaId }) {
       {config && <ConfigBox turma={turma} fechar={() => setConfig(false)} />}
 
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
-        <span className="small soft"><strong>Faltou</strong> = falta o dia inteiro ({hd}h) · chegou atrasado ou saiu mais cedo? clique nos <strong>horários</strong> em que não estava (1h cada)</span>
+        <span className="small soft"><strong>Faltou</strong> = falta o dia inteiro ({hd}h) · chegou atrasado ou saiu mais cedo? clique nos <strong>horários</strong> em que não estava (1h cada) · contato após <strong>{limiteSeguidas(turma, cfg)} faltas seguidas</strong>{isAprendizagemComercial(turma) ? " (Aprendizagem Comercial)" : ""}</span>
         <div className="row" style={{ gap: 6 }}>
           {feita ? <span className="chip" style={{ background: "var(--verde)" }}><CheckCircle2 size={11} /> Chamada feita · {nF} faltas · {nH} parciais</span> : <span className="chip" style={{ background: "#9CA3AF" }}>Chamada não feita</span>}
           {podeMarcar && !feita && <button className="btn btn-verde btn-sm" onClick={() => acoes.confirmarChamada(turma, data)}><CheckCircle2 size={13} /> Todos presentes</button>}
@@ -153,22 +153,26 @@ export default function Chamada({ turmaId }) {
               {ls.map((l) => {
                 const r = reg?.[l.aluno.id];
                 const horas = horasDe(r);
+                const apr = isAproveitamento(l.aluno);
+                const foraUC = apr && !dentroDeUC(l.aluno, data);
+                const podeAqui = podeMarcar && !foraUC;
                 return (
-                  <tr key={l.key} style={{ opacity: l.ativo ? 1 : 0.55 }}>
+                  <tr key={l.key} style={{ opacity: l.ativo && !foraUC ? 1 : 0.55 }}>
                     <td className="principal">
                       <button className="link-aluno" onClick={() => ui.abrirFicha(turma.id, l.aluno.id)}>{l.aluno.nome}</button>
                       {!l.aluno.email && <MailWarning size={12} color="var(--amarelo)" style={{ marginLeft: 5, verticalAlign: "-1px" }} />}
                       {!l.ativo && <span className="chip" style={{ background: "#9CA3AF", marginLeft: 6 }}>{l.situacao}</span>}
+                      {apr && <span className="chip-out" style={{ color: "#0E7490", borderColor: "#0E7490", marginLeft: 6 }} title="Aluno de aproveitamento de estudos: só contam as aulas dentro dos períodos das UCs dele">{foraUC ? "Aproveitamento · fora da UC" : "Aproveitamento"}</span>}
                     </td>
                     <td className="center" data-label="Presença">
                       <div className="seg">
-                        <button className={"pres" + (feita && !r ? " on" : "")} disabled={!podeMarcar} onClick={() => acoes.definirRegistro(turma, data, l.aluno, null)}>Presente</button>
-                        <button className={"falt" + (r?.status === "F" ? " on" : "")} disabled={!podeMarcar} onClick={() => acoes.definirRegistro(turma, data, l.aluno, r?.status === "F" ? null : { status: "F" })}>Faltou</button>
+                        <button className={"pres" + (feita && !r && !foraUC ? " on" : "")} disabled={!podeAqui} onClick={() => acoes.definirRegistro(turma, data, l.aluno, null)}>Presente</button>
+                        <button className={"falt" + (r?.status === "F" ? " on" : "")} disabled={!podeAqui} onClick={() => acoes.definirRegistro(turma, data, l.aluno, r?.status === "F" ? null : { status: "F" })}>Faltou</button>
                       </div>
                     </td>
                     <td className="center" data-label="Horários">
                       <div className="horas">
-                        {Array.from({ length: hd }, (_, i) => i + 1).map((h) => <button key={h} className={horas.includes(h) ? "on" : ""} disabled={!podeMarcar} title={`${h}º horário`} onClick={() => alternarHora(l, h)}>{h}º</button>)}
+                        {Array.from({ length: hd }, (_, i) => i + 1).map((h) => <button key={h} className={horas.includes(h) ? "on" : ""} disabled={!podeAqui} title={foraUC ? "Fora do período das UCs do aluno — não conta" : `${h}º horário`} onClick={() => alternarHora(l, h)}>{h}º</button>)}
                       </div>
                     </td>
                     <td data-label="Faltas no curso">

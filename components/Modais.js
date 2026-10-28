@@ -41,6 +41,12 @@ export function FichaAluno({ turmaId, alunoId }) {
       {situacao !== "Ativo" && (
         <div className="aviso info" style={{ marginBottom: 14 }}>Este aluno está marcado como <strong>&nbsp;{situacao}&nbsp;</strong> — por isso não aparece mais na Agenda, no Painel de atenção nem na Gestão de Permanência.</div>
       )}
+      {r.aproveitamento && (
+        <div className="aviso info" style={{ marginBottom: 14 }}>
+          <span><strong>Aproveitamento de estudos</strong> — {r.uc?.semPeriodos ? "nenhuma UC cadastrada ainda (nenhuma aula conta)" : r.uc?.cursando ? `cursando ${r.uc.atual.uc || "UC"} (${fmtData(r.uc.atual.inicio)} a ${r.uc.atual.fim ? fmtData(r.uc.atual.fim) : "sem data final"})` : r.uc?.proxima ? `aguardando a próxima UC: ${r.uc.proxima.uc || "UC"}, a partir de ${fmtData(r.uc.proxima.inicio)} — faltas e alertas pausados` : "fora do período das UCs — faltas e alertas pausados"}. Frequência calculada sobre {r.cargaHoraria ? `${r.cargaHoraria}h` : "a carga horária das UCs (não informada)"}.
+          {pode("editar") && <> <button className="link-aluno small" onClick={() => ui.abrirAluno(turma.id, aluno.id)}>Editar UCs</button></>}</span>
+        </div>
+      )}
       {situacao === "Evadiu" && (
         <div style={{ marginBottom: 14 }}>
           <div className="small" style={{ fontWeight: 700, marginBottom: 6 }}>Motivo da evasão</div>
@@ -229,15 +235,25 @@ export function AlunoModal({ turmaId, alunoId }) {
   const turma = turmas.find((t) => t.id === turmaId);
   const aluno = turma?.alunos.find((a) => a.id === alunoId);
   const [f, setF] = useState({ nome: aluno?.nome || "", matricula: aluno?.matricula || "", telefone: aluno?.telefone || "", email: aluno?.email || "" });
+  const [apr, setApr] = useState(() => ({ ativo: false, cargaHoraria: "", periodos: [], ...(aluno?.aproveitamento || {}) }));
   if (!turma) return null;
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const emailOk = !f.email || emailValido(f.email);
+  const setP = (i, k, v) => setApr((x) => ({ ...x, periodos: x.periodos.map((p, j) => (j === i ? { ...p, [k]: v } : p)) }));
+  const erroApr = !apr.ativo ? null
+    : !(Number(apr.cargaHoraria) > 0) ? "Informe a carga horária das UCs que o aluno cursa."
+    : apr.periodos.some((p) => !p.inicio) ? "Informe a data de início de cada UC."
+    : apr.periodos.some((p) => p.fim && p.fim < p.inicio) ? "A data final de uma UC está antes da inicial."
+    : null;
+  const aprSalvar = apr.ativo || aluno?.aproveitamento
+    ? { aproveitamento: { ativo: !!apr.ativo, cargaHoraria: Number(apr.cargaHoraria) || null, periodos: apr.periodos.map((p) => ({ id: p.id || Math.random().toString(36).slice(2, 9), uc: (p.uc || "").trim(), inicio: p.inicio || "", fim: p.fim || "" })) } }
+    : {};
   return (
     <Modal onClose={ui.fechar} titulo={aluno ? "Editar cadastro do aluno" : "Incluir aluno"} subtitulo={turma.curso}
       footer={<>
         {aluno && pode("turmaConfig") && <button className="btn btn-perigo-ghost" style={{ marginRight: "auto" }} onClick={async () => { await acoes.removerAluno(turma, aluno); ui.fechar(); }}><Trash2 size={13} /> Remover</button>}
         <button className="btn btn-ghost" onClick={ui.fechar}>Cancelar</button>
-        <button className="btn btn-primary" disabled={!f.nome.trim() || !emailOk} onClick={async () => { await acoes.salvarAluno(turma, { ...(aluno ? { id: aluno.id } : {}), ...f, nome: f.nome.trim() }); ui.fechar(); }}><Save size={14} /> Salvar</button>
+        <button className="btn btn-primary" disabled={!f.nome.trim() || !emailOk || !!erroApr} onClick={async () => { await acoes.salvarAluno(turma, { ...(aluno ? { id: aluno.id } : {}), ...f, nome: f.nome.trim(), ...aprSalvar }); ui.fechar(); }}><Save size={14} /> Salvar</button>
       </>}>
       <div className="grid-form">
         <label className="campo" style={{ gridColumn: "1 / -1" }}><span>Nome completo *</span><input className="input" value={f.nome} onChange={(e) => set("nome", e.target.value)} autoFocus /></label>
@@ -247,6 +263,32 @@ export function AlunoModal({ turmaId, alunoId }) {
           <input className="input" type="email" placeholder="aluno@email.com" value={f.email} onChange={(e) => set("email", e.target.value)} style={{ borderColor: emailOk ? undefined : "var(--vermelho)" }} />
           <small>{emailOk ? "Usado automaticamente nos e-mails do sistema — não é preciso digitar de novo." : "E-mail inválido."}</small>
         </label>
+      </div>
+      <div className="aproveitamento-box">
+        <label className="row" style={{ gap: 8, cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
+          <input type="checkbox" checked={!!apr.ativo} onChange={(e) => setApr((x) => ({ ...x, ativo: e.target.checked, periodos: e.target.checked && !x.periodos.length ? [{ uc: "", inicio: "", fim: "" }] : x.periodos }))} />
+          Matriculado via aproveitamento de estudos
+        </label>
+        <p className="small soft" style={{ margin: "4px 0 0" }}>O aluno só cursa algumas UCs. Fora dos períodos informados abaixo as faltas <strong>não contam</strong> e ele não recebe alerta nem e-mail. Os 75% são calculados sobre a carga horária das UCs dele.</p>
+        {apr.ativo && (
+          <>
+            <label className="campo" style={{ marginTop: 10, maxWidth: 260 }}><span>Carga horária das UCs que ele cursa (h) *</span>
+              <input className="input" type="number" min={1} value={apr.cargaHoraria ?? ""} onChange={(e) => setApr((x) => ({ ...x, cargaHoraria: e.target.value }))} placeholder="Ex.: 120" />
+            </label>
+            <div className="small" style={{ fontWeight: 700, margin: "10px 0 6px" }}>UCs que o aluno cursa</div>
+            {apr.periodos.map((p, i) => (
+              <div key={p.id || i} className="row uc-linha" style={{ gap: 6, marginBottom: 6 }}>
+                <input className="input grow" placeholder="Nome da UC (opcional)" value={p.uc || ""} onChange={(e) => setP(i, "uc", e.target.value)} />
+                <label className="small row" style={{ gap: 4 }}>de <input type="date" className="input" value={p.inicio || ""} onChange={(e) => setP(i, "inicio", e.target.value)} /></label>
+                <label className="small row" style={{ gap: 4 }}>até <input type="date" className="input" value={p.fim || ""} onChange={(e) => setP(i, "fim", e.target.value)} /></label>
+                <button className="btn btn-ghost btn-sm btn-icon" title="Remover UC" onClick={() => setApr((x) => ({ ...x, periodos: x.periodos.filter((_, j) => j !== i) }))}><Trash2 size={12} /></button>
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-sm" onClick={() => setApr((x) => ({ ...x, periodos: [...x.periodos, { uc: "", inicio: "", fim: "" }] }))}>+ Adicionar UC</button>
+            <p className="small soft" style={{ margin: "6px 0 0" }}>Deixe a data final em branco se a UC ainda não tem data para terminar.</p>
+            {erroApr && <div className="aviso erro" style={{ marginTop: 8 }}>{erroApr}</div>}
+          </>
+        )}
       </div>
     </Modal>
   );

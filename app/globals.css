@@ -319,3 +319,7 @@ table.tabela td.center, table.tabela th.center { text-align: center; }
 }
 @media print { .sidebar, .bottom-nav, .topbar, .no-print { display: none !important; } }
 .tabela-larga td, .tabela-larga th { white-space: nowrap; }
+
+/* aproveitamento de estudos */
+.aproveitamento-box { margin-top: 16px; border: 1px solid #A5F3FC; background: #F0FDFF; border-radius: 10px; padding: 12px 14px; }
+@media (max-width: 640px) { .uc-linha { flex-wrap: wrap; } }

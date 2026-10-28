@@ -27,6 +27,16 @@ e a lista de turmas por tipo (Técnicos / FIC). Ao clicar numa turma abre a Cham
 **Automático:** faltas seguidas (3 dias) ou entrada em risco → aluno vai para **Pendências** com “Necessita contato”;
 e-mail automático opcional (uma vez por sequência de faltas).
 
+## Novidades da versão 2.2
+
+**Aprendizagem Comercial — contato com 2 faltas seguidas.** Toda turma cujo curso (ou código) contém “Aprendizagem Comercial”
+usa 2 faltas seguidas para gerar alerta, contato e e-mail automático (as aulas são só às segundas e terças). As demais turmas seguem
+o número de Configurações → Alertas. A chamada mostra qual regra vale para a turma.
+
+**Aproveitamento de estudos.** Na ficha do aluno → **Editar cadastro**, marque “Matriculado via aproveitamento de estudos”, informe a
+carga horária das UCs que ele cursa e o período (início e fim) de cada UC. Fora desses períodos as faltas não contam, a chamada fica
+bloqueada para ele e não há alerta, contato nem e-mail. Os 75% e o limite de faltas são calculados sobre a carga horária das UCs dele.
+
 ## Novidades da versão 2.1
 
 **Evasão escolar (menu “Evasão escolar”)** — quantidade de evadidos, taxa de evasão (evadidos ÷ alunos matriculados nas
