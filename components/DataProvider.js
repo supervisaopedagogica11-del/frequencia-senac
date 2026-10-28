@@ -182,6 +182,26 @@ export default function DataProvider({ children }) {
       toast("Chamada excluída.");
     }),
 
+    // dia sem aula: não conta como aula dada (não entra no cálculo) e some o aviso de "chamada não feita"
+    marcarSemAula: seguro(async (turma, data, motivo) => {
+      if (!exigir("chamada")) return;
+      const temChamada = !!freq[`${turma.id}|${data}`];
+      if (temChamada) {
+        const ok = await confirmar({ titulo: "Marcar como dia sem aula?", texto: `Já existe chamada registrada em ${fmtData(data)}. Ao marcar “Não teve aula”, essa chamada (e as faltas dela) será apagada e o dia deixa de contar como aula dada.`, botao: "Marcar sem aula", perigo: true });
+        if (!ok) return;
+        await DB.excluirDia(turma.id, data);
+      }
+      await DB.definirSemAula(turma.id, data, { motivo: motivo || "Não informado", por: usuario?.nome || quem, porEmail: quem, em: DB.agoraISO() });
+      await log({ tipo: "frequencia", turmaId: turma.id, turmaNome: turma.curso, descricao: `${fmtData(data)}: não teve aula (${motivo || "motivo não informado"})${temChamada ? " — chamada do dia apagada" : ""}` });
+      toast("Dia marcado como sem aula.");
+    }),
+    desmarcarSemAula: seguro(async (turma, data) => {
+      if (!exigir("chamada")) return;
+      await DB.definirSemAula(turma.id, data, null);
+      await log({ tipo: "frequencia", turmaId: turma.id, turmaNome: turma.curso, descricao: `${fmtData(data)}: marcação "não teve aula" desfeita` });
+      toast("Marcação desfeita — agora é possível fazer a chamada.");
+    }),
+
     // turmas
     criarTurma: seguro(async (dados) => {
       if (!exigir("turmaConfig")) return;

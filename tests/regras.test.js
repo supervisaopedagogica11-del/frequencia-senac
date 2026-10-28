@@ -75,3 +75,15 @@ test("relatório quinzenal respeita o período das UCs", () => {
   assert.equal(p.aulas, 2);
   assert.equal(p.horasFalta, 4);
 });
+
+// ---------- dia sem aula ----------
+import { montarAgenda } from "../lib/pendencias.js";
+test("dia marcado sem aula não gera o aviso de chamada não feita", () => {
+  // terça 27/10/2026; houve aula nas terças anteriores
+  const t = { id: "s", curso: "Turma X", cargaHoraria: 100, horariosPorDia: 4, alunos: [{ id: "k", nome: "K" }] };
+  const f = freqDe("s", [["2026-10-13", {}], ["2026-10-20", {}]]);
+  const base = { turmas: [t], linhas: consolidar([t], f, {}, null, "2026-10-27"), alertas: {}, freq: f, cfg: null, hoje: "2026-10-27" };
+  assert.ok(montarAgenda(base).avisos.some((a) => a.chamada));
+  const t2 = { ...t, semAula: { "2026-10-27": { motivo: "Feriado" } } };
+  assert.ok(!montarAgenda({ ...base, turmas: [t2], linhas: consolidar([t2], f, {}, null, "2026-10-27") }).avisos.some((a) => a.chamada));
+});

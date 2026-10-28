@@ -323,3 +323,6 @@ table.tabela td.center, table.tabela th.center { text-align: center; }
 /* aproveitamento de estudos */
 .aproveitamento-box { margin-top: 16px; border: 1px solid #A5F3FC; background: #F0FDFF; border-radius: 10px; padding: 12px 14px; }
 @media (max-width: 640px) { .uc-linha { flex-wrap: wrap; } }
+/* dia sem aula */
+.pill-semaula { border-style: dashed; color: #475569; }
+.pill-semaula.on { background: #64748B; border-color: #64748B; color: #fff; }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, CheckCircle2, Trash2, UserPlus, Settings, FileDown, ClipboardCheck, X, Users, MailWarning } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Trash2, UserPlus, Settings, FileDown, ClipboardCheck, X, Users, MailWarning, CalendarX, Undo2 } from "lucide-react";
 import { useData } from "../DataProvider";
 import { useUI } from "../Shell";
 import { Empty } from "../ui";
@@ -93,12 +93,17 @@ function SemTurma() {
   );
 }
 
+const MOTIVOS_SEM_AULA = ["Feriado", "Ponto facultativo / recesso", "Evento ou atividade da escola", "Ausência do docente", "Outro"];
+
 export default function Chamada({ turmaId }) {
   const { turmas, freq, linhas, hoje, pode, acoes, cfg } = useData();
   const ui = useUI();
   const turma = turmas.find((t) => t.id === turmaId);
   const [data, setData] = useState(hoje);
   const [config, setConfig] = useState(false);
+  const [semAulaForm, setSemAulaForm] = useState(false);
+  const [motivoSA, setMotivoSA] = useState(MOTIVOS_SEM_AULA[0]);
+  const [outroSA, setOutroSA] = useState("");
   const datas = useMemo(() => (turmaId ? datasRegistradas(turmaId, freq).reverse() : []), [turmaId, freq]);
   if (!turmaId) return <SemTurma />;
   if (!turma) return <Empty>Turma não encontrada.</Empty>;
@@ -106,6 +111,8 @@ export default function Chamada({ turmaId }) {
   const hd = Number(turma.horariosPorDia) || 1;
   const reg = freq[`${turmaId}|${data}`];
   const feita = !!reg;
+  const semAula = turma.semAula?.[data] || null;
+  const diasSemAula = Object.keys(turma.semAula || {}).sort().reverse();
   const podeMarcar = pode("chamada");
   const ls = linhas.filter((l) => l.turma.id === turmaId).sort((a, b) => a.aluno.nome.localeCompare(b.aluno.nome));
   const horasDe = (r) => (!r ? [] : r.status === "F" ? Array.from({ length: hd }, (_, i) => i + 1) : r.status === "H" ? r.horas || [] : r.status === "A" ? [1] : []);
@@ -137,13 +144,34 @@ export default function Chamada({ turmaId }) {
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
         <span className="small soft"><strong>Faltou</strong> = falta o dia inteiro ({hd}h) · chegou atrasado ou saiu mais cedo? clique nos <strong>horários</strong> em que não estava (1h cada) · contato após <strong>{limiteSeguidas(turma, cfg)} faltas seguidas</strong>{isAprendizagemComercial(turma) ? " (Aprendizagem Comercial)" : ""}</span>
         <div className="row" style={{ gap: 6 }}>
-          {feita ? <span className="chip" style={{ background: "var(--verde)" }}><CheckCircle2 size={11} /> Chamada feita · {nF} faltas · {nH} parciais</span> : <span className="chip" style={{ background: "#9CA3AF" }}>Chamada não feita</span>}
-          {podeMarcar && !feita && <button className="btn btn-verde btn-sm" onClick={() => acoes.confirmarChamada(turma, data)}><CheckCircle2 size={13} /> Todos presentes</button>}
+          {semAula ? <span className="chip" style={{ background: "#64748B" }}><CalendarX size={11} /> Não teve aula · {semAula.motivo}</span>
+            : feita ? <span className="chip" style={{ background: "var(--verde)" }}><CheckCircle2 size={11} /> Chamada feita · {nF} faltas · {nH} parciais</span> : <span className="chip" style={{ background: "#9CA3AF" }}>Chamada não feita</span>}
+          {podeMarcar && !feita && !semAula && <button className="btn btn-verde btn-sm" onClick={() => acoes.confirmarChamada(turma, data)}><CheckCircle2 size={13} /> Todos presentes</button>}
+          {podeMarcar && !semAula && <button className="btn btn-ghost btn-sm" onClick={() => setSemAulaForm((v) => !v)}><CalendarX size={13} /> Não teve aula</button>}
+          {podeMarcar && semAula && <button className="btn btn-ghost btn-sm" onClick={() => acoes.desmarcarSemAula(turma, data)}><Undo2 size={13} /> Desfazer (teve aula)</button>}
           {podeMarcar && feita && <button className="btn btn-ghost btn-sm btn-icon" title="Apagar a chamada deste dia (aula não aconteceu)" onClick={() => acoes.excluirChamada(turma, data)}><Trash2 size={13} /></button>}
         </div>
       </div>
 
-      {!ls.length ? (
+      {semAulaForm && !semAula && podeMarcar && (
+        <div className="card sem-aula-form" style={{ marginBottom: 12 }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 8 }}>Marcar {fmtData(data)} como dia sem aula</div>
+          <div className="row" style={{ gap: 8 }}>
+            <select className="select" value={motivoSA} onChange={(e) => setMotivoSA(e.target.value)}>{MOTIVOS_SEM_AULA.map((m) => <option key={m}>{m}</option>)}</select>
+            {motivoSA === "Outro" && <input className="input grow" placeholder="Qual o motivo?" value={outroSA} onChange={(e) => setOutroSA(e.target.value)} />}
+            <button className="btn btn-primary btn-sm" disabled={motivoSA === "Outro" && !outroSA.trim()} onClick={async () => { await acoes.marcarSemAula(turma, data, motivoSA === "Outro" ? outroSA.trim() : motivoSA); setSemAulaForm(false); setOutroSA(""); }}>Confirmar</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSemAulaForm(false)}>Cancelar</button>
+          </div>
+          <p className="small soft" style={{ margin: "8px 0 0" }}>O dia não conta como aula dada, ninguém recebe falta e o aviso de “chamada não feita” não aparece.</p>
+        </div>
+      )}
+
+      {semAula ? (
+        <Empty icone={<CalendarX size={22} />}>
+          Não teve aula em {fmtData(data)} — {semAula.motivo}.<br />
+          <span className="small">Marcado por {semAula.por || "—"}. Este dia não conta no cálculo de frequência.</span>
+        </Empty>
+      ) : !ls.length ? (
         <Empty icone={<UserPlus size={22} />}>Nenhum aluno nesta turma. {pode("editar") && <button className="link-aluno" onClick={() => ui.abrirAluno(turma.id, null)}>Incluir aluno</button>}</Empty>
       ) : (
         <div className="tabela-wrap">
@@ -192,6 +220,12 @@ export default function Chamada({ turmaId }) {
         <div style={{ marginTop: 18 }}>
           <h4 style={{ marginBottom: 8 }}>Chamadas registradas · {datas.length} aulas ({datas.length * hd}h de {turma.cargaHoraria || "?"}h)</h4>
           <div className="row" style={{ gap: 5 }}>{datas.slice(0, 40).map((d) => <button key={d} className={"pill" + (d === data ? " on" : "")} onClick={() => setData(d)} title={fmtData(d)}>{fmtDataCurta(d)}</button>)}</div>
+        </div>
+      )}
+      {diasSemAula.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <h4 style={{ marginBottom: 8 }}>Dias sem aula · {diasSemAula.length}</h4>
+          <div className="row" style={{ gap: 5 }}>{diasSemAula.slice(0, 40).map((d) => <button key={d} className={"pill pill-semaula" + (d === data ? " on" : "")} onClick={() => setData(d)} title={`${fmtData(d)} — ${turma.semAula[d]?.motivo || ""}`}>{fmtDataCurta(d)}</button>)}</div>
         </div>
       )}
     </>

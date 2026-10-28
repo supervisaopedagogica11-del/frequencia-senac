@@ -33,6 +33,10 @@ e-mail automático opcional (uma vez por sequência de faltas).
 usa 2 faltas seguidas para gerar alerta, contato e e-mail automático (as aulas são só às segundas e terças). As demais turmas seguem
 o número de Configurações → Alertas. A chamada mostra qual regra vale para a turma.
 
+**Dia sem aula.** Na Chamada, botão **Não teve aula** → escolha o motivo (feriado, recesso, evento, ausência do docente ou outro).
+O dia não conta como aula dada, ninguém recebe falta e o aviso de “chamada não feita” some. Se já havia chamada nesse dia, o sistema
+pede confirmação e a apaga. **Desfazer (teve aula)** volta ao normal. Os dias sem aula aparecem listados no fim da Chamada.
+
 **Aproveitamento de estudos.** Na ficha do aluno → **Editar cadastro**, marque “Matriculado via aproveitamento de estudos”, informe a
 carga horária das UCs que ele cursa e o período (início e fim) de cada UC. Fora desses períodos as faltas não contam, a chamada fica
 bloqueada para ele e não há alerta, contato nem e-mail. Os 75% e o limite de faltas são calculados sobre a carga horária das UCs dele.
